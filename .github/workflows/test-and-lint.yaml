@@ -1,0 +1,42 @@
+name: Test and lint
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - '**/go.*'
+      - '**/input/*.txt'
+
+jobs:
+  test-and-lint:
+    name: Test and lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Fetch gotest
+        run: go install github.com/rakyll/gotest@latest
+
+      - name: Test
+        run: gotest -v ./...
+
+      - name: Fetch Staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Staticcheck
+        run: staticcheck -f stylish ./...
