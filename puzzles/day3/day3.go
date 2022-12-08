@@ -1,4 +1,4 @@
-package puzzles
+package day3
 
 import (
 	"bufio"
@@ -74,23 +74,23 @@ Priorities for these items must still be found to organize the sticker attachmen
 Find the item type that corresponds to the badges of each three-Elf group. What is the sum of the priorities of those item types?
 */
 
-type Day3 struct{}
+type Puzzle struct{}
 
-func (d Day3) Part1(reader io.Reader) (int, error) {
-	pairs, err := d.readPairs(reader)
+func (p Puzzle) Part1(reader io.Reader) (int, error) {
+	pairs, err := p.readPairs(reader)
 	if err != nil {
 		return 0, fmt.Errorf("reading pairs: %w", err)
 	}
 
 	prios := 0
 	for _, pair := range pairs {
-		a, b := d.runeSetOf(pair[0]), d.runeSetOf(pair[1])
+		a, b := p.runeSetOf(pair[0]), p.runeSetOf(pair[1])
 		intersection := a.Intersection(b)
 		if wantLen := 1; intersection.Len() != wantLen {
 			return 0, fmt.Errorf("got intersection of %v, want length %d", intersection.Values(), wantLen)
 		}
 
-		prio, err := d.priorityOf(intersection.Values()[0])
+		prio, err := p.priorityOf(intersection.Values()[0])
 		if err != nil {
 			return 0, fmt.Errorf("getting priority of %q", intersection.Values()[0])
 		}
@@ -100,21 +100,21 @@ func (d Day3) Part1(reader io.Reader) (int, error) {
 	return prios, nil
 }
 
-func (d Day3) Part2(reader io.Reader) (int, error) {
-	lines, err := d.readLines(reader)
+func (p Puzzle) Part2(reader io.Reader) (int, error) {
+	lines, err := p.readLines(reader)
 	if err != nil {
 		return 0, fmt.Errorf("reading pairs: %w", err)
 	}
 
 	prios := 0
-	for _, group := range d.groupsOf(lines) {
+	for _, group := range p.groupsOf(lines) {
 		a, b, c := group[0], group[1], group[2]
 		intersection := a.Intersection(b).Intersection(c)
 		if wantLen := 1; intersection.Len() != wantLen {
 			return 0, fmt.Errorf("got intersection of %v, want length %d", intersection.Values(), wantLen)
 		}
 
-		prio, err := d.priorityOf(intersection.Values()[0])
+		prio, err := p.priorityOf(intersection.Values()[0])
 		if err != nil {
 			return 0, fmt.Errorf("getting priority of %q", intersection.Values()[0])
 		}
@@ -124,16 +124,16 @@ func (d Day3) Part2(reader io.Reader) (int, error) {
 	return prios, nil
 }
 
-func (d Day3) groupsOf(lines []string) [][3]sets.Set[rune] {
+func (p Puzzle) groupsOf(lines []string) [][3]sets.Set[rune] {
 	groups := make([][3]sets.Set[rune], 0)
 
 	const i = 0
 	for len(lines) > 0 {
-		a := d.runeSetOf(lines[i])
+		a := p.runeSetOf(lines[i])
 
 	second:
 		for j := i + 1; j < len(lines); j++ {
-			b := d.runeSetOf(lines[j])
+			b := p.runeSetOf(lines[j])
 			intersection := a.Intersection(b)
 			if intersection.Len() < 1 {
 				continue second
@@ -141,7 +141,7 @@ func (d Day3) groupsOf(lines []string) [][3]sets.Set[rune] {
 
 		third:
 			for k := j + 1; k < len(lines); k++ {
-				c := d.runeSetOf(lines[k])
+				c := p.runeSetOf(lines[k])
 				if intrsctn := intersection.Intersection(c); intrsctn.Len() != 1 {
 					continue third
 				}
@@ -161,7 +161,7 @@ func (d Day3) groupsOf(lines []string) [][3]sets.Set[rune] {
 	return groups
 }
 
-func (Day3) readPairs(reader io.Reader) ([][2]string, error) {
+func (Puzzle) readPairs(reader io.Reader) ([][2]string, error) {
 	pairs := make([][2]string, 0)
 
 	scanner := bufio.NewScanner(reader)
@@ -178,7 +178,7 @@ func (Day3) readPairs(reader io.Reader) ([][2]string, error) {
 	return pairs, nil
 }
 
-func (Day3) readLines(reader io.Reader) ([]string, error) {
+func (Puzzle) readLines(reader io.Reader) ([]string, error) {
 	lines := make([]string, 0)
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
@@ -189,11 +189,11 @@ func (Day3) readLines(reader io.Reader) ([]string, error) {
 	return lines, nil
 }
 
-func (Day3) runeSetOf(s string) sets.Set[rune] {
+func (Puzzle) runeSetOf(s string) sets.Set[rune] {
 	return sets.Of([]rune(s))
 }
 
-func (Day3) priorityOf(char rune) (int, error) {
+func (Puzzle) priorityOf(char rune) (int, error) {
 	switch {
 	case char >= 'a' && char <= 'z':
 		return 1 + int(byte(char)-byte('a')), nil

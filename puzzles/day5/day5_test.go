@@ -1,4 +1,4 @@
-package puzzles_test
+package day5_test
 
 import (
 	"os"
@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/kristofferostlund/adventofcode-2022/pkg/relative"
-	"github.com/kristofferostlund/adventofcode-2022/puzzles"
+	"github.com/kristofferostlund/adventofcode-2022/puzzles/day5"
 )
 
-func TestDay5(t *testing.T) {
+func TestPuzzle(t *testing.T) {
 	exampleInput := `
     [D]
 [N] [C]
@@ -25,7 +25,7 @@ move 1 from 1 to 2
 	t.Run("Part1", func(t *testing.T) {
 		t.Run("example input", func(t *testing.T) {
 			want := "CMZ"
-			got, err := puzzles.Day5{}.Part1(strings.NewReader(exampleInput))
+			got, err := day5.Puzzle{}.Part1(strings.NewReader(exampleInput))
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)
 			}
@@ -34,15 +34,15 @@ move 1 from 1 to 2
 			}
 		})
 
-		t.Run("input/day5.txt", func(t *testing.T) {
-			f, err := os.Open(relative.Filepath("./input/day5.txt"))
+		t.Run("input.txt", func(t *testing.T) {
+			f, err := os.Open(relative.Filepath("./input.txt"))
 			if err != nil {
 				t.Fatalf("opening file: %v", err)
 			}
 			defer f.Close()
 
 			want := "FZCMJCRHZ"
-			got, err := puzzles.Day5{}.Part1(f)
+			got, err := day5.Puzzle{}.Part1(f)
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)
 			}
@@ -56,7 +56,7 @@ move 1 from 1 to 2
 	t.Run("Part2", func(t *testing.T) {
 		t.Run("example input", func(t *testing.T) {
 			want := "MCD"
-			got, err := puzzles.Day5{}.Part2(strings.NewReader(exampleInput))
+			got, err := day5.Puzzle{}.Part2(strings.NewReader(exampleInput))
 			if err != nil {
 				t.Fatalf("solving part 2: %v", err)
 			}
@@ -65,15 +65,15 @@ move 1 from 1 to 2
 			}
 		})
 
-		t.Run("input/day5.txt", func(t *testing.T) {
-			f, err := os.Open(relative.Filepath("./input/day5.txt"))
+		t.Run("input.txt", func(t *testing.T) {
+			f, err := os.Open(relative.Filepath("./input.txt"))
 			if err != nil {
 				t.Fatalf("opening file: %v", err)
 			}
 			defer f.Close()
 
 			want := "JSDHQMZGF"
-			got, err := puzzles.Day5{}.Part2(f)
+			got, err := day5.Puzzle{}.Part2(f)
 			if err != nil {
 				t.Fatalf("solving part 2: %v", err)
 			}

@@ -1,4 +1,4 @@
-package puzzles_test
+package day6_test
 
 import (
 	"fmt"
@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/kristofferostlund/adventofcode-2022/pkg/relative"
-	"github.com/kristofferostlund/adventofcode-2022/puzzles"
+	"github.com/kristofferostlund/adventofcode-2022/puzzles/day6"
 )
 
-func TestDay6(t *testing.T) {
+func TestPuzzle(t *testing.T) {
 	t.Run("Part1", func(t *testing.T) {
 		examples := []struct {
 			sequence string
@@ -27,7 +27,7 @@ func TestDay6(t *testing.T) {
 			for _, example := range examples {
 				exampleInput, want := example.sequence, example.want
 				t.Run(fmt.Sprintf("%s -> %d", exampleInput, want), func(t *testing.T) {
-					got, err := puzzles.Day6{}.Part1(strings.NewReader(exampleInput))
+					got, err := day6.Puzzle{}.Part1(strings.NewReader(exampleInput))
 					if err != nil {
 						t.Fatalf("solving part 1: %v", err)
 					}
@@ -38,15 +38,15 @@ func TestDay6(t *testing.T) {
 			}
 		})
 
-		t.Run("input/day6.txt", func(t *testing.T) {
-			f, err := os.Open(relative.Filepath("./input/day6.txt"))
+		t.Run("input.txt", func(t *testing.T) {
+			f, err := os.Open(relative.Filepath("./input.txt"))
 			if err != nil {
 				t.Fatalf("opening file: %v", err)
 			}
 			defer f.Close()
 
 			want := 1794
-			got, err := puzzles.Day6{}.Part1(f)
+			got, err := day6.Puzzle{}.Part1(f)
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)
 			}
@@ -73,7 +73,7 @@ func TestDay6(t *testing.T) {
 			for _, example := range examples {
 				exampleInput, want := example.sequence, example.want
 				t.Run(fmt.Sprintf("%s -> %d", exampleInput, want), func(t *testing.T) {
-					got, err := puzzles.Day6{}.Part2(strings.NewReader(exampleInput))
+					got, err := day6.Puzzle{}.Part2(strings.NewReader(exampleInput))
 					if err != nil {
 						t.Fatalf("solving part 2: %v", err)
 					}
@@ -84,15 +84,15 @@ func TestDay6(t *testing.T) {
 			}
 		})
 
-		t.Run("input/day6.txt", func(t *testing.T) {
-			f, err := os.Open(relative.Filepath("./input/day6.txt"))
+		t.Run("input.txt", func(t *testing.T) {
+			f, err := os.Open(relative.Filepath("./input.txt"))
 			if err != nil {
 				t.Fatalf("opening file: %v", err)
 			}
 			defer f.Close()
 
 			want := 2851
-			got, err := puzzles.Day6{}.Part2(f)
+			got, err := day6.Puzzle{}.Part2(f)
 			if err != nil {
 				t.Fatalf("solving part 2: %v", err)
 			}

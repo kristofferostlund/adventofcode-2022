@@ -1,4 +1,4 @@
-package puzzles
+package day6
 
 import (
 	"fmt"
@@ -58,21 +58,21 @@ Here are the first positions of start-of-message markers for all of the above ex
 How many characters need to be processed before the first start-of-message marker is detected?
 */
 
-type Day6 struct{}
+type Puzzle struct{}
 
-func (d Day6) Part1(reader io.Reader) (int, error) {
+func (p Puzzle) Part1(reader io.Reader) (int, error) {
 	seqLen := 4
 
-	return d.findMarker(reader, seqLen)
+	return p.findMarker(reader, seqLen)
 }
 
-func (d Day6) Part2(reader io.Reader) (int, error) {
+func (p Puzzle) Part2(reader io.Reader) (int, error) {
 	seqLen := 14
 
-	return d.findMarker(reader, seqLen)
+	return p.findMarker(reader, seqLen)
 }
 
-func (Day6) findMarker(reader io.Reader, seqLen int) (int, error) {
+func (Puzzle) findMarker(reader io.Reader, seqLen int) (int, error) {
 	seq, err := io.ReadAll(reader)
 	if err != nil {
 		return 0, fmt.Errorf("reading input: %w", err)

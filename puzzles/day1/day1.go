@@ -1,4 +1,4 @@
-package puzzles
+package day1
 
 import (
 	"bufio"
@@ -61,10 +61,10 @@ In the example above, the top three Elves are the fourth Elf (with 24000 Calorie
 Find the top three Elves carrying the most Calories. How many Calories are those Elves carrying in total?
 */
 
-type Day1 struct{}
+type Puzzle struct{}
 
-func (d Day1) Part1(reader io.Reader) (int, error) {
-	groups, err := d.parseGroups(reader)
+func (p Puzzle) Part1(reader io.Reader) (int, error) {
+	groups, err := p.parseGroups(reader)
 	if err != nil {
 		return 0, fmt.Errorf("parsing groups: %w", err)
 	}
@@ -72,7 +72,7 @@ func (d Day1) Part1(reader io.Reader) (int, error) {
 	return groups[0], nil
 }
 
-func (d Day1) Part2(reader io.Reader) (int, error) {
+func (d Puzzle) Part2(reader io.Reader) (int, error) {
 	groups, err := d.parseGroups(reader)
 	if err != nil {
 		return 0, fmt.Errorf("parsing groups: %w", err)
@@ -86,7 +86,7 @@ func (d Day1) Part2(reader io.Reader) (int, error) {
 	return sum, nil
 }
 
-func (Day1) parseGroups(reader io.Reader) ([]int, error) {
+func (Puzzle) parseGroups(reader io.Reader) ([]int, error) {
 	groups := make([]int, 0)
 
 	scanner := bufio.NewScanner(reader)

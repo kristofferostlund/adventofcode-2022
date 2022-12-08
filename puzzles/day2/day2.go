@@ -1,4 +1,4 @@
-package puzzles
+package day2
 
 import (
 	"bufio"
@@ -53,14 +53,14 @@ Now that you're correctly decrypting the ultra top secret strategy guide, you wo
 Following the Elf's instructions for the second column, what would your total score be if everything goes exactly according to your strategy guide?
 */
 
-type Day2 struct {
+type Puzzle struct {
 	scores        map[string]int
 	opponentMoves map[string]string
 	beatenBy      map[string]string
 }
 
-func NewDay2() Day2 {
-	return Day2{
+func NewPuzzle() Puzzle {
+	return Puzzle{
 		scores: map[string]int{
 			"rock":     1,
 			"paper":    2,
@@ -83,8 +83,8 @@ func NewDay2() Day2 {
 	}
 }
 
-func (d Day2) Part1(reader io.Reader) (int, error) {
-	pairs, err := d.readStrategy(reader)
+func (p Puzzle) Part1(reader io.Reader) (int, error) {
+	pairs, err := p.readStrategy(reader)
 	if err != nil {
 		return 0, fmt.Errorf("reading strategy: %w", err)
 	}
@@ -97,20 +97,20 @@ func (d Day2) Part1(reader io.Reader) (int, error) {
 
 	score := 0
 	for _, pair := range pairs {
-		score += d.scoreOf(d.opponentMoves[pair[0]], playerMoves[pair[1]])
+		score += p.scoreOf(p.opponentMoves[pair[0]], playerMoves[pair[1]])
 	}
 
 	return score, nil
 }
 
-func (d Day2) Part2(reader io.Reader) (int, error) {
-	pairs, err := d.readStrategy(reader)
+func (p Puzzle) Part2(reader io.Reader) (int, error) {
+	pairs, err := p.readStrategy(reader)
 	if err != nil {
 		return 0, fmt.Errorf("reading strategy: %w", err)
 	}
 
-	beats := make(map[string]string, len(d.beatenBy))
-	for k, v := range d.beatenBy {
+	beats := make(map[string]string, len(p.beatenBy))
+	for k, v := range p.beatenBy {
 		beats[v] = k
 	}
 
@@ -122,12 +122,12 @@ func (d Day2) Part2(reader io.Reader) (int, error) {
 
 	score := 0
 	for _, pair := range pairs {
-		opponentMove := d.opponentMoves[pair[0]]
+		opponentMove := p.opponentMoves[pair[0]]
 
 		var playerMove string
 		switch outcomes[pair[1]] {
 		case "loss":
-			playerMove = d.beatenBy[opponentMove]
+			playerMove = p.beatenBy[opponentMove]
 		case "win":
 			playerMove = beats[opponentMove]
 		case "draw":
@@ -136,13 +136,13 @@ func (d Day2) Part2(reader io.Reader) (int, error) {
 			return 0, fmt.Errorf("unknown outcome for %q", pair[1])
 		}
 
-		score += d.scoreOf(opponentMove, playerMove)
+		score += p.scoreOf(opponentMove, playerMove)
 	}
 
 	return score, nil
 }
 
-func (Day2) readStrategy(reader io.Reader) ([][2]string, error) {
+func (Puzzle) readStrategy(reader io.Reader) ([][2]string, error) {
 	pairs := make([][2]string, 0)
 
 	scanner := bufio.NewScanner(reader)
@@ -162,14 +162,14 @@ func (Day2) readStrategy(reader io.Reader) ([][2]string, error) {
 	return pairs, nil
 }
 
-func (d Day2) scoreOf(a, b string) int {
-	moveScore := d.scores[b]
+func (p Puzzle) scoreOf(a, b string) int {
+	moveScore := p.scores[b]
 	if a == b {
-		return d.scores["draw"] + moveScore
+		return p.scores["draw"] + moveScore
 	}
-	if d.beatenBy[a] == b {
-		return d.scores["loss"] + moveScore
+	if p.beatenBy[a] == b {
+		return p.scores["loss"] + moveScore
 	}
 
-	return d.scores["win"] + moveScore
+	return p.scores["win"] + moveScore
 }

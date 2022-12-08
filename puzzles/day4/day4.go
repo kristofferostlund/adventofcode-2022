@@ -1,4 +1,4 @@
-package puzzles
+package day4
 
 import (
 	"bufio"
@@ -72,17 +72,17 @@ So, in this example, the number of overlapping assignment pairs is 4.
 In how many assignment pairs do the ranges overlap?
 */
 
-type Day4 struct{}
+type Puzzle struct{}
 
-func (d Day4) Part1(reader io.Reader) (int, error) {
-	pairs, err := d.readPairs(reader)
+func (p Puzzle) Part1(reader io.Reader) (int, error) {
+	pairs, err := p.readPairs(reader)
 	if err != nil {
 		return 0, fmt.Errorf("reading pairs: %w", err)
 	}
 
 	counter := 0
 	for _, pair := range pairs {
-		a, b := d.setRangeOf(pair[0]), d.setRangeOf(pair[1])
+		a, b := p.setRangeOf(pair[0]), p.setRangeOf(pair[1])
 		if a.Contains(b) || b.Contains(a) {
 			counter++
 		}
@@ -91,15 +91,15 @@ func (d Day4) Part1(reader io.Reader) (int, error) {
 	return counter, nil
 }
 
-func (d Day4) Part2(reader io.Reader) (int, error) {
-	pairs, err := d.readPairs(reader)
+func (p Puzzle) Part2(reader io.Reader) (int, error) {
+	pairs, err := p.readPairs(reader)
 	if err != nil {
 		return 0, fmt.Errorf("reading pairs: %w", err)
 	}
 
 	counter := 0
 	for _, pair := range pairs {
-		a, b := d.setRangeOf(pair[0]), d.setRangeOf(pair[1])
+		a, b := p.setRangeOf(pair[0]), p.setRangeOf(pair[1])
 		if a.Overlaps(b) {
 			counter++
 		}
@@ -108,7 +108,7 @@ func (d Day4) Part2(reader io.Reader) (int, error) {
 	return counter, nil
 }
 
-func (d Day4) readPairs(reader io.Reader) ([][2][2]int, error) {
+func (p Puzzle) readPairs(reader io.Reader) ([][2][2]int, error) {
 	pairs := make([][2][2]int, 0)
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
@@ -122,11 +122,11 @@ func (d Day4) readPairs(reader io.Reader) ([][2][2]int, error) {
 			return nil, fmt.Errorf("malformed line %q", line)
 		}
 
-		rangeA, err := d.parseRange(rangeStrA)
+		rangeA, err := p.parseRange(rangeStrA)
 		if err != nil {
 			return nil, fmt.Errorf("parsing range A: %w", err)
 		}
-		rangeB, err := d.parseRange(rangeStrB)
+		rangeB, err := p.parseRange(rangeStrB)
 		if err != nil {
 			return nil, fmt.Errorf("parsing range B: %w", err)
 		}
@@ -137,7 +137,7 @@ func (d Day4) readPairs(reader io.Reader) ([][2][2]int, error) {
 	return pairs, nil
 }
 
-func (Day4) parseRange(rangeStr string) ([2]int, error) {
+func (Puzzle) parseRange(rangeStr string) ([2]int, error) {
 	fromStr, toStr, ok := strings.Cut(rangeStr, "-")
 	if !ok {
 		return [2]int{}, fmt.Errorf("malformed range %q", rangeStr)
@@ -155,7 +155,7 @@ func (Day4) parseRange(rangeStr string) ([2]int, error) {
 	return [2]int{from, to}, nil
 }
 
-func (Day4) setRangeOf(fromTo [2]int) sets.Set[int] {
+func (Puzzle) setRangeOf(fromTo [2]int) sets.Set[int] {
 	vals := make([]int, 0, fromTo[1]-fromTo[0])
 	for i := fromTo[0]; i <= fromTo[1]; i++ {
 		vals = append(vals, i)

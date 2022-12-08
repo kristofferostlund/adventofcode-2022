@@ -1,4 +1,4 @@
-package puzzles
+package day5
 
 import (
 	"bufio"
@@ -117,10 +117,10 @@ In this example, the CrateMover 9001 has put the crates in a totally different o
 Before the rearrangement process finishes, update your simulation so that the Elves know where they should stand to be ready to unload the final supplies. After the rearrangement procedure completes, what crate ends up on top of each stack?
 */
 
-type Day5 struct{}
+type Puzzle struct{}
 
-func (d Day5) Part1(reader io.Reader) (string, error) {
-	stacks, instructions, err := d.parseInput(reader)
+func (p Puzzle) Part1(reader io.Reader) (string, error) {
+	stacks, instructions, err := p.parseInput(reader)
 	if err != nil {
 		return "", fmt.Errorf("parsing input: %w", err)
 	}
@@ -140,8 +140,8 @@ func (d Day5) Part1(reader io.Reader) (string, error) {
 	return sb.String(), nil
 }
 
-func (d Day5) Part2(reader io.Reader) (string, error) {
-	stacks, instructions, err := d.parseInput(reader)
+func (p Puzzle) Part2(reader io.Reader) (string, error) {
+	stacks, instructions, err := p.parseInput(reader)
 	if err != nil {
 		return "", fmt.Errorf("parsing input: %w", err)
 	}
@@ -165,7 +165,7 @@ func (d Day5) Part2(reader io.Reader) (string, error) {
 	return sb.String(), nil
 }
 
-func (d Day5) parseInput(reader io.Reader) (map[int]*Stack[string], [][3]int, error) {
+func (p Puzzle) parseInput(reader io.Reader) (map[int]*Stack[string], [][3]int, error) {
 	stacks := make(map[int]*Stack[string], 0)
 	instructions := make([][3]int, 0)
 
@@ -190,7 +190,7 @@ func (d Day5) parseInput(reader io.Reader) (map[int]*Stack[string], [][3]int, er
 				continue
 			}
 
-			letters := d.getIndexedLetters(line)
+			letters := p.getIndexedLetters(line)
 			for idx, letter := range letters {
 				if stacks[idx] == nil {
 					stacks[idx] = &Stack[string]{}
@@ -202,7 +202,7 @@ func (d Day5) parseInput(reader io.Reader) (map[int]*Stack[string], [][3]int, er
 				continue
 			}
 
-			count, from, to, err := d.parseInstruction(line)
+			count, from, to, err := p.parseInstruction(line)
 			if err != nil {
 				return nil, nil, fmt.Errorf("parsing instructions")
 			}
@@ -214,7 +214,7 @@ func (d Day5) parseInput(reader io.Reader) (map[int]*Stack[string], [][3]int, er
 	return stacks, instructions, nil
 }
 
-func (Day5) getIndexedLetters(line string) map[int]string {
+func (Puzzle) getIndexedLetters(line string) map[int]string {
 	idx := 1
 	letters := make(map[int]string, 0)
 	for i := 0; i < len(line); i++ {
@@ -228,7 +228,7 @@ func (Day5) getIndexedLetters(line string) map[int]string {
 	return letters
 }
 
-func (Day5) parseInstruction(line string) (int, int, int, error) {
+func (Puzzle) parseInstruction(line string) (int, int, int, error) {
 	ss := strings.Split(line, " ")
 	if len(ss) != 6 {
 		return 0, 0, 0, fmt.Errorf("malformed instruction line %q", line)
@@ -248,32 +248,4 @@ func (Day5) parseInstruction(line string) (int, int, int, error) {
 	}
 
 	return count, from, to, nil
-}
-
-type Stack[T any] []T
-
-func (s *Stack[T]) Pop() T {
-	item := (*s)[len(*s)-1]
-	*s = append([]T(nil), (*s)[:len(*s)-1]...)
-	return item
-}
-
-func (s *Stack[T]) PopN(n int) []T {
-	items := make([]T, 0, n)
-	for i := 0; i < n; i++ {
-		items = append(items, s.Pop())
-	}
-	return items
-}
-
-func (s *Stack[T]) Push(items ...T) {
-	*s = append(*s, items...)
-}
-
-func (s *Stack[T]) Unshift(items ...T) {
-	*s = append(items, *s...)
-}
-
-func (s *Stack[T]) String() string {
-	return fmt.Sprint(*s)
 }
