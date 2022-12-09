@@ -706,45 +706,27 @@ var directions = map[string][2]int{
 }
 
 func (p Puzzle) Part1(reader io.Reader) (int, error) {
-	scanner := bufio.NewScanner(reader)
-	h, t := [2]int{0, 0}, [2]int{0, 0}
-
-	tVisits := sets.Of([][2]int{t})
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-
-		v, mut, err := handleInstruction(line)
-		if err != nil {
-			return 0, fmt.Errorf("handling instruction: %w", err)
-		}
-
-		h[0] += mut[0] * v
-		h[1] += mut[1] * v
-
-		for i := 0; i < v; i++ {
-			if absInt(h[0]-t[0]) > 1 || absInt(h[1]-t[1]) > 1 {
-				step := stepTowards(t, h)
-
-				t[0] += step[0]
-				t[1] += step[1]
-				if !tVisits.Has(t) {
-					tVisits.Add(t)
-				}
-			}
-		}
+	knots := make([][2]int, 2)
+	visits, err := tailVisits(reader, knots)
+	if err != nil {
+		return 0, fmt.Errorf("getting tail visits: %w", err)
 	}
 
-	return tVisits.Len(), nil
+	return len(visits), nil
 }
 
 func (p Puzzle) Part2(reader io.Reader) (int, error) {
-	scanner := bufio.NewScanner(reader)
 	knots := make([][2]int, 10)
+	visits, err := tailVisits(reader, knots)
+	if err != nil {
+		return 0, fmt.Errorf("getting tail visits: %w", err)
+	}
 
+	return len(visits), nil
+}
+
+func tailVisits(reader io.Reader, knots [][2]int) ([][2]int, error) {
+	scanner := bufio.NewScanner(reader)
 	tVisits := sets.Of([][2]int{knots[len(knots)-1]})
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -754,7 +736,7 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 
 		v, mut, err := handleInstruction(line)
 		if err != nil {
-			return 0, fmt.Errorf("handling instruction: %w", err)
+			return nil, fmt.Errorf("handling instruction: %w", err)
 		}
 
 		knots[0][0] += mut[0] * v
@@ -778,8 +760,7 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 			}
 		}
 	}
-
-	return tVisits.Len(), nil
+	return tVisits.Values(), nil
 }
 
 func handleInstruction(line string) (int, [2]int, error) {
