@@ -21,6 +21,25 @@ func Of[T comparable](values []T) Set[T] {
 	return set
 }
 
+func (s Set[T]) Add(value T) {
+	s.s[value] = struct{}{}
+}
+
+func (s Set[T]) Union(other Set[T]) Set[T] {
+	newSet := Of(other.Values())
+	for v := range s.s {
+		if _, exists := newSet.s[v]; !exists {
+			newSet.s[v] = struct{}{}
+		}
+	}
+	return newSet
+}
+
+func (s Set[T]) Has(value T) bool {
+	_, exists := s.s[value]
+	return exists
+}
+
 func (s Set[T]) Intersection(other Set[T]) Set[T] {
 	// Optimization to base the iteration of the smallest set.
 	// Probably highly unnecessary.
