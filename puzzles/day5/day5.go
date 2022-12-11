@@ -6,6 +6,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	stcks "github.com/kristofferostlund/adventofcode-2022/pkg/stacks"
 )
 
 type Puzzle struct{}
@@ -56,8 +58,8 @@ func (p Puzzle) Part2(reader io.Reader) (string, error) {
 	return sb.String(), nil
 }
 
-func (p Puzzle) parseInput(reader io.Reader) (map[int]*Stack[string], [][3]int, error) {
-	stacks := make(map[int]*Stack[string], 0)
+func (p Puzzle) parseInput(reader io.Reader) (map[int]*stcks.Stack[string], [][3]int, error) {
+	stacks := make(map[int]*stcks.Stack[string], 0)
 	instructions := make([][3]int, 0)
 
 	state := "parsing_stacks"
@@ -84,7 +86,7 @@ func (p Puzzle) parseInput(reader io.Reader) (map[int]*Stack[string], [][3]int, 
 			letters := p.getIndexedLetters(line)
 			for idx, letter := range letters {
 				if stacks[idx] == nil {
-					stacks[idx] = &Stack[string]{}
+					stacks[idx] = &stcks.Stack[string]{}
 				}
 				stacks[idx].Unshift(letter)
 			}
