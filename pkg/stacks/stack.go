@@ -15,6 +15,12 @@ func (s *Stack[T]) Len() int {
 	return len(*s)
 }
 
+func (s *Stack[T]) Values() []T {
+	values := make([]T, len(*s))
+	copy(values, *s)
+	return values
+}
+
 func (s *Stack[T]) Pop() T {
 	item := (*s)[len(*s)-1]
 	*s = append([]T(nil), (*s)[:len(*s)-1]...)

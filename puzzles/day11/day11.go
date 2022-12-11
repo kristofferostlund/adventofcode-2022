@@ -9,27 +9,56 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kristofferostlund/adventofcode-2022/pkg/sets"
 	"github.com/kristofferostlund/adventofcode-2022/pkg/stacks"
+	"github.com/kristofferostlund/adventofcode-2022/puzzles/day11/math"
 )
 
 type Puzzle struct{}
 
-func (p Puzzle) Part1(reader io.Reader) (int64, error) {
-	ops, err := parseInput(reader, func(val int64) int64 { return val / 3 })
+func (p Puzzle) Part1(reader io.Reader) (int, error) {
+	ops, err := parseInput(reader)
 	if err != nil {
 		return 0, fmt.Errorf("parsing input: %w", err)
 	}
 
-	activity := make([]int64, len(ops))
+	mutateValue := func(val int) int { return val / 3 }
 
-	for r := 0; r < 20; r++ {
+	monkeyBusiness := p.getMonkeyBusiness(ops, 20, mutateValue)
+	return monkeyBusiness, nil
+}
+
+func (p Puzzle) Part2(reader io.Reader) (int, error) {
+	ops, err := parseInput(reader)
+	if err != nil {
+		return 0, fmt.Errorf("parsing input: %w", err)
+	}
+
+	// This is what the ✨ way ✨ from:
+	// > find another way to keep your worry levels manageable
+	allDivisors := make([]int, 0)
+	for _, op := range ops {
+		allDivisors = append(allDivisors, op.divisor)
+	}
+	lcm := math.LCMSlice(sets.Of(allDivisors).Values())
+	mutateValue := func(value int) int { return value % lcm }
+
+	monkeyBusiness := p.getMonkeyBusiness(ops, 10000, mutateValue)
+	return monkeyBusiness, nil
+}
+
+func (Puzzle) getMonkeyBusiness(ops []*Operation, iterations int, mutateValue func(value int) int) int {
+	activity := make([]int, len(ops))
+
+	for r := 0; r < iterations; r++ {
 		for i, op := range ops {
 			for op.Next() {
 				activity[i]++
 
-				value, dest := op.Exec()
+				value, dest := op.Exec(mutateValue)
 				// If any monkey were to throw to itself, this would cause
-				// the loop to never finish.
+				// the loop to never finish. Luckily monkeys doesn't juggle
+				// so we're fine!
 				ops[dest].Append(value)
 			}
 		}
@@ -39,20 +68,18 @@ func (p Puzzle) Part1(reader io.Reader) (int64, error) {
 		return activity[i] > activity[j]
 	})
 
-	return activity[0] * activity[1], nil
-}
-
-func (p Puzzle) Part2(reader io.Reader) (int64, error) {
-	return 0, nil
+	return activity[0] * activity[1]
 }
 
 type Operation struct {
-	items *stacks.Stack[int64]
-	// operation combines both the Operation and Test directives from the exercise.
-	operation func(old int64) (value int64, destination int)
+	items *stacks.Stack[int]
+
+	operation    func(old int) int
+	divisor      int
+	destinations map[bool]int
 }
 
-func (op *Operation) Append(val int64) {
+func (op *Operation) Append(val int) {
 	op.items.Push(val)
 }
 
@@ -60,11 +87,19 @@ func (op *Operation) Next() bool {
 	return op.items.Len() > 0
 }
 
-func (op *Operation) Exec() (value int64, destination int) {
-	return op.operation(op.items.Shift())
+func (op *Operation) Exec(mutateValue func(int) int) (value int, destination int) {
+	old := op.items.Shift()
+	val := op.operation(old)
+
+	val = mutateValue(val)
+
+	isDivisible := val%op.divisor == 0
+	dest := op.destinations[isDivisible]
+
+	return val, dest
 }
 
-func parseInput(reader io.Reader, reduceWorry func(value int64) int64) ([]*Operation, error) {
+func parseInput(reader io.Reader) ([]*Operation, error) {
 	rawOps := make([]map[string]string, 0)
 	current := make(map[string]string, 5)
 
@@ -102,44 +137,36 @@ func parseInput(reader io.Reader, reduceWorry func(value int64) int64) ([]*Opera
 			return nil, fmt.Errorf("preparing operation func: %w", err)
 		}
 
-		testFunc, err := prepareTestFunc(rawOp["Test"])
+		divisor, err := parseTestDivisor(rawOp["Test"])
 		if err != nil {
 			return nil, fmt.Errorf("preparing test func: %w", err)
 		}
 
-		outcomes, err := parseOutcomes(rawOp["If true"], rawOp["If false"])
+		destinations, err := parseDestinations(rawOp["If true"], rawOp["If false"])
 		if err != nil {
 			return nil, fmt.Errorf("parsing outcomes: %w", err)
 		}
 
 		ops = append(ops, &Operation{
-			items: stacks.Of(startingItems),
-			operation: func(old int64) (value int64, destination int) {
-				val := opFunc(old)
-
-				val = reduceWorry(val)
-
-				result := testFunc(val)
-
-				dest := outcomes[result]
-
-				return val, dest
-			},
+			items:        stacks.Of(startingItems),
+			operation:    opFunc,
+			divisor:      divisor,
+			destinations: destinations,
 		})
 	}
 
 	return ops, nil
 }
 
-func parseStartingItems(raw string) ([]int64, error) {
+func parseStartingItems(raw string) ([]int, error) {
 	if raw == "" {
 		return nil, errors.New("must have values")
 	}
 
-	items := make([]int64, 0)
+	items := make([]int, 0)
 	for _, v := range strings.Split(raw, ",") {
 		trimmed := strings.TrimSpace(v)
-		item, err := strconv.ParseInt(trimmed, 10, 64)
+		item, err := strconv.Atoi(trimmed)
 		if err != nil {
 			return nil, fmt.Errorf("parsing %q: %w", trimmed, err)
 		}
@@ -149,14 +176,14 @@ func parseStartingItems(raw string) ([]int64, error) {
 	return items, nil
 }
 
-var operators = map[string]func(a, b int64) int64{
-	"+": func(a, b int64) int64 { return a + b },
-	"*": func(a, b int64) int64 { return a * b },
+var operators = map[string]func(a, b int) int{
+	"+": func(a, b int) int { return a + b },
+	"*": func(a, b int) int { return a * b },
 }
 
-var literals = map[string]int64{}
+var literals = map[string]int{}
 
-func prepareOperationFunc(raw string) (func(old int64) int64, error) {
+func prepareOperationFunc(raw string) (func(old int) int, error) {
 	trimmed := strings.TrimSpace(raw)
 	chunks := strings.Split(trimmed, " ")
 	if len(chunks) != 5 {
@@ -165,14 +192,14 @@ func prepareOperationFunc(raw string) (func(old int64) int64, error) {
 
 	a, operator, b := chunks[2], chunks[3], chunks[4]
 	if _, exists := literals[a]; a != "old" || exists {
-		parsed, err := strconv.ParseInt(a, 10, 64)
+		parsed, err := strconv.Atoi(a)
 		if err != nil {
 			return nil, fmt.Errorf("parsing a: %w", err)
 		}
 		literals[a] = parsed
 	}
 	if _, exists := literals[b]; b != "old" || exists {
-		parsed, err := strconv.ParseInt(b, 10, 64)
+		parsed, err := strconv.Atoi(b)
 		if err != nil {
 			return nil, fmt.Errorf("parsing b: %w", err)
 		}
@@ -184,7 +211,7 @@ func prepareOperationFunc(raw string) (func(old int64) int64, error) {
 		return nil, fmt.Errorf("illegal operator %q", operator)
 	}
 
-	return func(old int64) int64 {
+	return func(old int) int {
 		reg := copyMap(literals)
 		reg["old"] = old
 
@@ -192,34 +219,21 @@ func prepareOperationFunc(raw string) (func(old int64) int64, error) {
 	}, nil
 }
 
-var tests = map[string]func(want int64) func(value int64) bool{
-	"divisible": func(divisibleBy int64) func(value int64) bool {
-		return func(value int64) bool {
-			return value%divisibleBy == 0
-		}
-	},
-}
-
-func prepareTestFunc(raw string) (func(value int64) bool, error) {
+func parseTestDivisor(raw string) (int, error) {
 	vals := strings.Split(strings.TrimSpace(raw), " ")
 	if len(vals) != 3 {
-		return nil, fmt.Errorf("unexpected test declaration %q, must have exactly 3 elements", raw)
+		return 0, fmt.Errorf("unexpected test declaration %q, must have exactly 3 elements", raw)
 	}
 
-	testVal, err := strconv.ParseInt(vals[2], 10, 64)
+	testVal, err := strconv.Atoi(vals[2])
 	if err != nil {
-		return nil, fmt.Errorf("parsing test value: %w", err)
+		return 0, fmt.Errorf("parsing test value: %w", err)
 	}
 
-	testFunc, ok := tests[vals[0]]
-	if !ok {
-		return nil, fmt.Errorf("no such test: %q", vals[0])
-	}
-
-	return testFunc(testVal), nil
+	return testVal, nil
 }
 
-func parseOutcomes(rawIfTrue, rawIfFalse string) (map[bool]int, error) {
+func parseDestinations(rawIfTrue, rawIfFalse string) (map[bool]int, error) {
 	if rawIfTrue == "" || rawIfFalse == "" {
 		return nil, fmt.Errorf("malformed input: %q, %q", rawIfTrue, rawIfFalse)
 	}
