@@ -6,6 +6,8 @@ import (
 	"sync"
 )
 
+const initialCost = math.MaxInt64
+
 type Node[T comparable] struct {
 	t       T
 	cost    int
@@ -14,6 +16,11 @@ type Node[T comparable] struct {
 
 func (n *Node[T]) String() string {
 	return fmt.Sprintf("Node{cost: %d, t: %v, through: %v}", n.cost, n.t, n.through)
+}
+
+func (n *Node[T]) reset() {
+	n.cost = initialCost
+	n.through = nil
 }
 
 func (n *Node[T]) Value() T {
@@ -33,32 +40,6 @@ type Graph[T comparable] struct {
 	mutex sync.RWMutex
 }
 
-func Dijkstra[T comparable](graph *Graph[T], start T) {
-	visited := make(map[*Node[T]]struct{}, len(graph.Nodes))
-	heap := &SetHeap[T]{elemLookup: make(map[*Node[T]]struct{})}
-
-	startNode := graph.GetNode(start)
-	startNode.cost = 0
-	heap.Push(startNode)
-
-	for heap.Size() > 0 {
-		current := heap.Pop()
-		visited[current] = struct{}{}
-		edges := graph.Edges[current.t]
-
-		for _, edge := range edges {
-			if _, isVisited := visited[edge.node]; !isVisited {
-				heap.Push(edge.node)
-
-				if current.cost+edge.weight < edge.node.cost {
-					edge.node.cost = current.cost + edge.weight
-					edge.node.through = current
-				}
-			}
-		}
-	}
-}
-
 func NewGraph[T comparable]() *Graph[T] {
 	return &Graph[T]{
 		Nodes:     make([]*Node[T], 0),
@@ -69,7 +50,7 @@ func NewGraph[T comparable]() *Graph[T] {
 }
 
 func NewNode[T comparable](val T) *Node[T] {
-	return &Node[T]{val, math.MaxInt, nil}
+	return &Node[T]{val, initialCost, nil}
 }
 
 func (g *Graph[T]) GetNode(val T) *Node[T] {
@@ -99,7 +80,9 @@ func (g *Graph[T]) AddEdge(from, to *Node[T], weight int) {
 	g.Edges[from.t] = append(g.Edges[from.t], &Edge[T]{to, weight})
 }
 
-func (g *Graph[T]) ShortestPath(dest T) (int, []T, bool) {
+func (g *Graph[T]) ShortestPath(start, dest T) (int, []T, bool) {
+	g.dijkstra(start)
+
 	idx, ok := g.nodeIndex[dest]
 	if !ok {
 		return 0, nil, false
@@ -157,6 +140,38 @@ func (h *SetHeap[T]) Pop() *Node[T] {
 	h.rearrange(0)
 
 	return element
+}
+
+func (g *Graph[T]) dijkstra(start T) {
+	// Reset the nodes so we can calculate the fastest path several times.
+	for _, n := range g.Nodes {
+		n.reset()
+	}
+
+	visited := make(map[*Node[T]]struct{}, len(g.Nodes))
+	heap := &SetHeap[T]{elemLookup: make(map[*Node[T]]struct{})}
+
+	startNode := g.GetNode(start)
+	startNode.cost = 0
+
+	heap.Push(startNode)
+
+	for heap.Size() > 0 {
+		current := heap.Pop()
+		visited[current] = struct{}{}
+		edges := g.Edges[current.t]
+
+		for _, edge := range edges {
+			if _, isVisited := visited[edge.node]; !isVisited {
+				heap.Push(edge.node)
+
+				if current.cost+edge.weight < edge.node.cost {
+					edge.node.cost = current.cost + edge.weight
+					edge.node.through = current
+				}
+			}
+		}
+	}
 }
 
 func (h *SetHeap[T]) rearrange(i int) {

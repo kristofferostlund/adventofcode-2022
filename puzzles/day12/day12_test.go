@@ -49,34 +49,34 @@ abdefghi
 		})
 	})
 
-	// t.Run("Part2", func(t *testing.T) {
-	// 	t.Run("example input", func(t *testing.T) {
-	// 		var want int = 2713310158
-	// 		got, err := day12.Puzzle{}.Part2(strings.NewReader(exampleInput))
-	// 		if err != nil {
-	// 			t.Fatalf("solving part 2: %v", err)
-	// 		}
-	// 		if got != want {
-	// 			t.Errorf("got %d, want %d", got, want)
-	// 		}
-	// 	})
+	t.Run("Part2", func(t *testing.T) {
+		t.Run("example input", func(t *testing.T) {
+			want := 29
+			got, err := day12.Puzzle{}.Part2(strings.NewReader(exampleInput))
+			if err != nil {
+				t.Fatalf("solving part 2: %v", err)
+			}
+			if got != want {
+				t.Errorf("got %d, want %d", got, want)
+			}
+		})
 
-	// 	t.Run("input.txt", func(t *testing.T) {
-	// 		f, err := os.Open(relative.Filepath("./input.txt"))
-	// 		if err != nil {
-	// 			t.Fatalf("opening file: %v", err)
-	// 		}
-	// 		defer f.Close()
+		t.Run("input.txt", func(t *testing.T) {
+			f, err := os.Open(relative.Filepath("./input.txt"))
+			if err != nil {
+				t.Fatalf("opening file: %v", err)
+			}
+			defer f.Close()
 
-	// 		var want int = 30616425600
-	// 		got, err := day12.Puzzle{}.Part2(f)
-	// 		if err != nil {
-	// 			t.Fatalf("solving part 1: %v", err)
-	// 		}
+			want := 345
+			got, err := day12.Puzzle{}.Part2(f)
+			if err != nil {
+				t.Fatalf("solving part 1: %v", err)
+			}
 
-	// 		if got != want {
-	// 			t.Errorf("got %d, want %d", got, want)
-	// 		}
-	// 	})
-	// })
+			if got != want {
+				t.Errorf("got %d, want %d", got, want)
+			}
+		})
+	})
 }

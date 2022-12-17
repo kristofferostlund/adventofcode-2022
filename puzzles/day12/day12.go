@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math"
 
 	"github.com/kristofferostlund/adventofcode-2022/puzzles/day12/dijkstra"
 )
@@ -16,12 +17,61 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("parsing grid: %w", err)
 	}
 
+	graph, err := p.setupGraph(grid)
+	if err != nil {
+		return 0, fmt.Errorf("setting up graph: %w", err)
+	}
+
+	cost, _, ok := graph.ShortestPath(start, dest)
+	if !ok {
+		return 0, fmt.Errorf("couldn't find a path from %s to %s", start, dest)
+	}
+
+	return cost, nil
+}
+
+func (p Puzzle) Part2(reader io.Reader) (int, error) {
+	grid, _, dest, err := readInput(reader)
+	if err != nil {
+		return 0, fmt.Errorf("parsing grid: %w", err)
+	}
+
+	graph, err := p.setupGraph(grid)
+	if err != nil {
+		return 0, fmt.Errorf("setting up graph: %w", err)
+	}
+
+	startLocs := make([]Loc, 0)
+	for _, loc := range grid.Locs() {
+		val, _ := grid.AtLoc(loc)
+		if val == int('a') {
+			startLocs = append(startLocs, loc)
+		}
+	}
+
+	smallest := math.MaxInt64
+	for _, start := range startLocs {
+		cost, _, ok := graph.ShortestPath(start, dest)
+		if !ok {
+			return 0, fmt.Errorf("couldn't find a path from %s to %s", start, dest)
+		}
+		if cost < smallest {
+			smallest = cost
+		}
+	}
+
+	return smallest, nil
+}
+
+func (Puzzle) setupGraph(grid Grid) (*dijkstra.Graph[Loc], error) {
+	graph := dijkstra.NewGraph[Loc]()
+	for _, l := range grid.Locs() {
+		graph.AddNode(dijkstra.NewNode(l))
+	}
+
 	steps := [][2]int{{-1, 0}, {0, -1}, {1, 0}, {0, 1}}
-
-	legalSteps := make(map[Loc][]Loc, 0)
-	locs := grid.Locs()
-
-	for _, loc := range locs {
+	for _, node := range graph.Nodes {
+		loc := node.Value()
 		val, _ := grid.AtLoc(loc)
 
 		for _, step := range steps {
@@ -32,46 +82,18 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 				continue
 			}
 
-			// This gives us the reverse of what we want, so we can't use this
-			// even if this really is how the algo is suggested in the task.
-			// is legal if either nextVal is one of {val+1, val, <val}
+			// "at most one higher than the elevation of your current square"
 			if nextVal-val <= 1 {
-				legalSteps[loc] = append(legalSteps[loc], next)
+				other := graph.GetNode(next)
+				if other == nil {
+					return nil, fmt.Errorf("no node found for %s", next)
+				}
+				graph.AddEdge(node, other, 1)
 			}
 		}
 	}
 
-	graph := dijkstra.NewGraph[Loc]()
-	nodes := make(map[Loc]*dijkstra.Node[Loc])
-	for _, l := range locs {
-		node := dijkstra.NewNode(l)
-		nodes[l] = node
-
-		graph.AddNode(node)
-	}
-
-	for l, node := range nodes {
-		for _, step := range legalSteps[l] {
-			other, ok := nodes[step]
-			if !ok {
-				return 0, fmt.Errorf("no node found for %s", step)
-			}
-			graph.AddEdge(node, other, 1)
-		}
-	}
-
-	dijkstra.Dijkstra(graph, start)
-
-	cost, _, ok := graph.ShortestPath(dest)
-	if !ok {
-		return 0, fmt.Errorf("couldn't find a path from %s to %s", start, dest)
-	}
-
-	return cost, nil
-}
-
-func (p Puzzle) Part2(reader io.Reader) (int, error) {
-	return 0, nil
+	return graph, nil
 }
 
 type Loc [2]int
