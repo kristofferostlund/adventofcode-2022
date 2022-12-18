@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 
+	"github.com/kristofferostlund/adventofcode-2022/pkg/location"
 	"github.com/kristofferostlund/adventofcode-2022/puzzles/day12/dijkstra"
 )
 
@@ -41,7 +42,7 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("setting up graph: %w", err)
 	}
 
-	startLocs := make([]Loc, 0)
+	startLocs := make([]location.Loc, 0)
 	for _, loc := range grid.Locs() {
 		val, _ := grid.AtLoc(loc)
 		if val == int('a') {
@@ -63,8 +64,8 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 	return smallest, nil
 }
 
-func (Puzzle) setupGraph(grid Grid) (*dijkstra.Graph[Loc], error) {
-	graph := dijkstra.NewGraph[Loc]()
+func (Puzzle) setupGraph(grid Grid) (*dijkstra.Graph[location.Loc], error) {
+	graph := dijkstra.NewGraph[location.Loc]()
 	for _, l := range grid.Locs() {
 		graph.AddNode(dijkstra.NewNode(l))
 	}
@@ -96,19 +97,9 @@ func (Puzzle) setupGraph(grid Grid) (*dijkstra.Graph[Loc], error) {
 	return graph, nil
 }
 
-type Loc [2]int
-
-func (l Loc) Add(other Loc) Loc {
-	return Loc{l[0] + other[0], l[1] + other[1]}
-}
-
-func (l Loc) String() string {
-	return fmt.Sprintf("{x: %d, y: %d}", l[0], l[1])
-}
-
 type Grid [][]int
 
-func (g Grid) AtLoc(loc Loc) (int, bool) {
+func (g Grid) AtLoc(loc location.Loc) (int, bool) {
 	x, y := loc[0], loc[1]
 	return g.At(x, y)
 }
@@ -125,19 +116,19 @@ func (g Grid) At(x, y int) (int, bool) {
 	return g[y][x], true
 }
 
-func (g Grid) Locs() []Loc {
-	locs := make([]Loc, len(g)*len(g[0]))
+func (g Grid) Locs() []location.Loc {
+	locs := make([]location.Loc, len(g)*len(g[0]))
 	for y, row := range g {
 		for x := range row {
-			loc := Loc{x, y}
+			loc := location.Loc{x, y}
 			locs = append(locs, loc)
 		}
 	}
 	return locs
 }
 
-func readInput(reader io.Reader) (Grid, Loc, Loc, error) {
-	var start, dest Loc
+func readInput(reader io.Reader) (Grid, location.Loc, location.Loc, error) {
+	var start, dest location.Loc
 	var grid [][]int
 
 	scanner := bufio.NewScanner(reader)
@@ -151,10 +142,10 @@ func readInput(reader io.Reader) (Grid, Loc, Loc, error) {
 		for i, r := range line {
 			switch r {
 			case 'S':
-				start = Loc{i, len(grid)}
+				start = location.Loc{i, len(grid)}
 				row = append(row, int('a'))
 			case 'E':
-				dest = Loc{i, len(grid)}
+				dest = location.Loc{i, len(grid)}
 				row = append(row, int('z'))
 			default:
 				row = append(row, int(r))
