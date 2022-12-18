@@ -9,37 +9,11 @@ import (
 	"github.com/kristofferostlund/adventofcode-2022/puzzles/day13"
 )
 
-var exampleInput = `
-[1,1,3,1,1]
-[1,1,5,1,1]
-
-[[1],[2,3,4]]
-[[1],4]
-
-[9]
-[[8,7,6]]
-
-[[4,4],4,4]
-[[4,4],4,4,4]
-
-[7,7,7,7]
-[7,7,7]
-
-[]
-[3]
-
-[[[]]]
-[[]]
-
-[1,[2,[3,[4,[5,6,7]]]],8,9]
-[1,[2,[3,[4,[5,6,0]]]],8,9]
-`
-
-func TestPuzzle(t *testing.T) {
+func TestPacketSolver(t *testing.T) {
 	t.Run("Part1", func(t *testing.T) {
 		t.Run("example input", func(t *testing.T) {
 			want := 13
-			got, err := day13.Puzzle{}.Part1(strings.NewReader(exampleInput))
+			got, err := day13.PacketSolver{}.Part1(strings.NewReader(exampleInput))
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)
 			}
@@ -56,7 +30,7 @@ func TestPuzzle(t *testing.T) {
 			defer f.Close()
 
 			want := 5196
-			got, err := day13.Puzzle{}.Part1(f)
+			got, err := day13.PacketSolver{}.Part1(f)
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)
 			}
@@ -70,7 +44,7 @@ func TestPuzzle(t *testing.T) {
 	t.Run("Part2", func(t *testing.T) {
 		t.Run("example input", func(t *testing.T) {
 			want := 140
-			got, err := day13.Puzzle{}.Part2(strings.NewReader(exampleInput))
+			got, err := day13.PacketSolver{}.Part2(strings.NewReader(exampleInput))
 			if err != nil {
 				t.Fatalf("solving part 2: %v", err)
 			}
@@ -87,7 +61,7 @@ func TestPuzzle(t *testing.T) {
 			defer f.Close()
 
 			want := 22134
-			got, err := day13.Puzzle{}.Part2(f)
+			got, err := day13.PacketSolver{}.Part2(f)
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)
 			}
