@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kristofferostlund/adventofcode-2022/pkg/location"
+	"github.com/kristofferostlund/adventofcode-2022/pkg/grids"
 )
+
+var sandStartFrom = grids.Loc{500, 0}
 
 type Puzzle struct{}
 
@@ -15,23 +17,12 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("parsing input: %w", err)
 	}
 
-	sandStartFrom := location.Loc{500, 0}
-	grid, err := NewGrid(paths, sandStartFrom)
+	grid, err := newGrid(paths, sandStartFrom)
 	if err != nil {
-		return 0, fmt.Errorf("createing grid: %w", err)
+		return 0, fmt.Errorf("creating grid: %w", err)
 	}
 
-	isValid := func(loc location.Loc) bool {
-		return grid.InBounds(loc)
-	}
-
-	for {
-		if !simulateSand(grid, isValid) {
-			break
-		}
-	}
-
-	return grid.Count(sand), nil
+	return p.solve(grid, grid.InBounds)
 }
 
 func (p Puzzle) Part2(reader io.Reader) (int, error) {
@@ -40,24 +31,26 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("parsing input: %w", err)
 	}
 
-	sandStartFrom := location.Loc{500, 0}
-	grid, err := NewGrid(paths, sandStartFrom)
+	grid, err := newGrid(paths, sandStartFrom)
 	if err != nil {
-		return 0, fmt.Errorf("createing grid: %w", err)
+		return 0, fmt.Errorf("creating grid: %w", err)
 	}
 
 	filledStart := false
-	isValid := func(loc location.Loc) bool {
+	isValid := func(loc grids.Loc) bool {
 		if filledStart {
 			return false
 		}
 		if loc == sandStartFrom {
 			filledStart = true
 		}
-
-		return true
+		return !grid.IsAtFloor(loc)
 	}
 
+	return p.solve(grid, isValid)
+}
+
+func (p Puzzle) solve(grid *Grid, isValid func(loc grids.Loc) bool) (int, error) {
 	for {
 		if !simulateSand(grid, isValid) {
 			break
@@ -67,19 +60,19 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 	return grid.Count(sand), nil
 }
 
-func simulateSand(grid *Grid, isValid func(loc location.Loc) bool) bool {
-	down := location.Loc{0, 1}
-	left := location.Loc{-1, 0}
-	right := location.Loc{1, 0}
+func simulateSand(grid *Grid, isValid func(loc grids.Loc) bool) bool {
+	down := grids.Loc{0, 1}
+	left := grids.Loc{-1, 0}
+	right := grids.Loc{1, 0}
 
-	findNext := func(loc location.Loc) (location.Loc, bool) {
+	findNext := func(loc grids.Loc) (grids.Loc, bool) {
 		next := loc.Add(down)
 		switch grid.At(next) {
 		case empty, sandStart:
 			return next, true
 		}
 
-		toTry := []location.Loc{next.Add(left), next.Add(right)}
+		toTry := []grids.Loc{next.Add(left), next.Add(right)}
 		for _, next := range toTry {
 			if grid.At(next) == empty {
 				return next, true
@@ -89,7 +82,7 @@ func simulateSand(grid *Grid, isValid func(loc location.Loc) bool) bool {
 		return loc, false
 	}
 
-	loc := grid.sandFrom
+	loc := grid.sandStart
 	for next, valid := findNext(loc); valid; next, valid = findNext(loc) {
 		loc = next
 		if !isValid(loc) {

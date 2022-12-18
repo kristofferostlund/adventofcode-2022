@@ -1,4 +1,4 @@
-package location
+package grids
 
 import "fmt"
 
@@ -10,4 +10,8 @@ func (l Loc) Add(other Loc) Loc {
 
 func (l Loc) String() string {
 	return fmt.Sprintf("{x: %d, y: %d}", l[0], l[1])
+}
+
+func (l Loc) XY() (x, y int) {
+	return l[0], l[1]
 }

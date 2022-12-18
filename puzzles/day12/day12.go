@@ -6,7 +6,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/kristofferostlund/adventofcode-2022/pkg/location"
+	"github.com/kristofferostlund/adventofcode-2022/pkg/grids"
 	"github.com/kristofferostlund/adventofcode-2022/puzzles/day12/dijkstra"
 )
 
@@ -42,7 +42,7 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("setting up graph: %w", err)
 	}
 
-	startLocs := make([]location.Loc, 0)
+	startLocs := make([]grids.Loc, 0)
 	for _, loc := range grid.Locs() {
 		val, _ := grid.AtLoc(loc)
 		if val == int('a') {
@@ -64,8 +64,8 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 	return smallest, nil
 }
 
-func (Puzzle) setupGraph(grid Grid) (*dijkstra.Graph[location.Loc], error) {
-	graph := dijkstra.NewGraph[location.Loc]()
+func (Puzzle) setupGraph(grid Grid) (*dijkstra.Graph[grids.Loc], error) {
+	graph := dijkstra.NewGraph[grids.Loc]()
 	for _, l := range grid.Locs() {
 		graph.AddNode(dijkstra.NewNode(l))
 	}
@@ -99,7 +99,7 @@ func (Puzzle) setupGraph(grid Grid) (*dijkstra.Graph[location.Loc], error) {
 
 type Grid [][]int
 
-func (g Grid) AtLoc(loc location.Loc) (int, bool) {
+func (g Grid) AtLoc(loc grids.Loc) (int, bool) {
 	x, y := loc[0], loc[1]
 	return g.At(x, y)
 }
@@ -116,19 +116,19 @@ func (g Grid) At(x, y int) (int, bool) {
 	return g[y][x], true
 }
 
-func (g Grid) Locs() []location.Loc {
-	locs := make([]location.Loc, len(g)*len(g[0]))
+func (g Grid) Locs() []grids.Loc {
+	locs := make([]grids.Loc, len(g)*len(g[0]))
 	for y, row := range g {
 		for x := range row {
-			loc := location.Loc{x, y}
+			loc := grids.Loc{x, y}
 			locs = append(locs, loc)
 		}
 	}
 	return locs
 }
 
-func readInput(reader io.Reader) (Grid, location.Loc, location.Loc, error) {
-	var start, dest location.Loc
+func readInput(reader io.Reader) (Grid, grids.Loc, grids.Loc, error) {
+	var start, dest grids.Loc
 	var grid [][]int
 
 	scanner := bufio.NewScanner(reader)
@@ -142,10 +142,10 @@ func readInput(reader io.Reader) (Grid, location.Loc, location.Loc, error) {
 		for i, r := range line {
 			switch r {
 			case 'S':
-				start = location.Loc{i, len(grid)}
+				start = grids.Loc{i, len(grid)}
 				row = append(row, int('a'))
 			case 'E':
-				dest = location.Loc{i, len(grid)}
+				dest = grids.Loc{i, len(grid)}
 				row = append(row, int('z'))
 			default:
 				row = append(row, int(r))
