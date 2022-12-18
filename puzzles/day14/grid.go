@@ -19,8 +19,8 @@ const (
 )
 
 type Grid struct {
-	topLeft     location.Loc
-	bottomRight location.Loc
+	minX, maxX int
+	minY, maxY int
 
 	values   map[location.Loc]rune
 	sandFrom location.Loc
@@ -47,25 +47,23 @@ func NewGrid(paths [][]location.Loc, sandFrom location.Loc) (*Grid, error) {
 	}
 
 	grid := &Grid{
-		topLeft:     location.Loc{minX, minY},
-		bottomRight: location.Loc{maxX, maxY},
-		values:      make(map[location.Loc]rune),
-		sandFrom:    sandFrom,
+		minX: minX,
+		maxX: maxX,
+		minY: minY,
+		maxY: maxY,
+
+		values:   make(map[location.Loc]rune),
+		sandFrom: sandFrom,
 	}
 
-	if err := grid.set(sandFrom, sandStart); err != nil {
-		return nil, err
-	}
+	grid.set(sandFrom, sandStart)
 
 	for _, path := range paths {
 		for i := 1; i < len(path); i++ {
 			from, to := path[i-1], path[i]
 
 			for at := from; ; at = stepTowards(at, to) {
-				if err := grid.SetRock(at); err != nil {
-					return nil, err
-				}
-
+				grid.SetRock(at)
 				if at == to {
 					break
 				}
@@ -77,6 +75,10 @@ func NewGrid(paths [][]location.Loc, sandFrom location.Loc) (*Grid, error) {
 }
 
 func (g *Grid) At(at location.Loc) rune {
+	if at[1] == g.maxY+2 {
+		return rock
+	}
+
 	r, ok := g.values[at]
 	if !ok {
 		return empty
@@ -85,8 +87,24 @@ func (g *Grid) At(at location.Loc) rune {
 }
 
 func (g *Grid) String() string {
-	minX, maxX := g.topLeft[0], g.bottomRight[0]
-	minY, maxY := g.topLeft[1], g.bottomRight[1]
+	minX, maxX := g.minX, g.maxX
+	minY, maxY := g.minY, g.maxY
+
+	for loc := range g.values {
+		if maxX < loc[0] {
+			maxX = loc[0]
+		}
+		if loc[0] < minX {
+			minX = loc[0]
+		}
+
+		if maxY < loc[1] {
+			maxY = loc[1]
+		}
+		if loc[1] < minY {
+			minY = loc[1]
+		}
+	}
 
 	sb := &strings.Builder{}
 	for y := minY; y <= maxY; y++ {
@@ -99,28 +117,33 @@ func (g *Grid) String() string {
 	return sb.String()
 }
 
-func (g *Grid) SetRock(at location.Loc) error {
-	return g.set(at, rock)
-}
-
-func (g *Grid) SetSand(at location.Loc) error {
-	return g.set(at, sand)
-}
-
-func (g *Grid) set(at location.Loc, r rune) error {
-	if !g.withinBounds(at) {
-		return fmt.Errorf("%w: setting %s at %v", errOutOfBounds, string(r), at)
+func (g *Grid) Count(r rune) int {
+	counter := 0
+	for _, rr := range g.values {
+		if rr == r {
+			counter++
+		}
 	}
-
-	g.values[at] = r
-	return nil
+	return counter
 }
 
-func (g *Grid) withinBounds(p location.Loc) bool {
+func (g *Grid) SetRock(at location.Loc) {
+	g.set(at, rock)
+}
+
+func (g *Grid) SetSand(at location.Loc) {
+	g.set(at, sand)
+}
+
+func (g *Grid) set(at location.Loc, r rune) {
+	g.values[at] = r
+}
+
+func (g *Grid) InBounds(p location.Loc) bool {
 	x, y := p[0], p[1]
 
-	minX, maxX := g.topLeft[0], g.bottomRight[0]
-	minY, maxY := g.topLeft[1], g.bottomRight[1]
+	minX, maxX := g.minX, g.maxX
+	minY, maxY := g.minY, g.maxY
 
 	return minX <= x && x <= maxX &&
 		minY <= y && y <= maxY
