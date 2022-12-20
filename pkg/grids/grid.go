@@ -47,6 +47,20 @@ func (g *Grid[T]) String() string {
 	return sb.String()
 }
 
+func (g *Grid[T]) RenderRow(y int) string {
+	sb := &strings.Builder{}
+	for x := g.bounds.MinX(); x <= g.bounds.MaxX(); x++ {
+		at := Loc{x, y}
+		value, ok := g.At(at)
+		if !ok {
+			value = g.emptyVal
+		}
+		sb.WriteString(fmt.Sprint(value))
+	}
+
+	return sb.String()
+}
+
 func (g *Grid[T]) Count(value T) int {
 	counter := 0
 	for _, v := range g.values {
