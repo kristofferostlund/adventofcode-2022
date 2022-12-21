@@ -6,8 +6,8 @@ import (
 	"io"
 	"math"
 
+	"github.com/kristofferostlund/adventofcode-2022/pkg/dijkstra"
 	"github.com/kristofferostlund/adventofcode-2022/pkg/grids"
-	"github.com/kristofferostlund/adventofcode-2022/puzzles/day12/dijkstra"
 )
 
 type Puzzle struct{}
