@@ -31,20 +31,7 @@ func (g *Grid[T]) At(at Loc) (T, bool) {
 }
 
 func (g *Grid[T]) String() string {
-	sb := &strings.Builder{}
-	for y := g.bounds.MinY(); y <= g.bounds.MaxY(); y++ {
-		for x := g.bounds.MinX(); x <= g.bounds.MaxX(); x++ {
-			at := Loc{x, y}
-			value, ok := g.At(at)
-			if !ok {
-				value = g.emptyVal
-			}
-			sb.WriteString(fmt.Sprint(value))
-		}
-		sb.WriteString("\n")
-	}
-
-	return sb.String()
+	return g.RenderArea(g.bounds)
 }
 
 func (g *Grid[T]) RenderRow(y int) string {
@@ -56,6 +43,23 @@ func (g *Grid[T]) RenderRow(y int) string {
 			value = g.emptyVal
 		}
 		sb.WriteString(fmt.Sprint(value))
+	}
+
+	return sb.String()
+}
+
+func (g *Grid[T]) RenderArea(bounds Bounds) string {
+	sb := &strings.Builder{}
+	for y := bounds.MinY(); y <= bounds.MaxY(); y++ {
+		for x := bounds.MinX(); x <= bounds.MaxX(); x++ {
+			at := Loc{x, y}
+			value, ok := g.At(at)
+			if !ok {
+				value = g.emptyVal
+			}
+			sb.WriteString(fmt.Sprint(value))
+		}
+		sb.WriteString("\n")
 	}
 
 	return sb.String()

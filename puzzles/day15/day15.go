@@ -2,11 +2,10 @@ package day15
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
-	"strconv"
-	"strings"
 
 	"github.com/kristofferostlund/adventofcode-2022/pkg/grids"
 	"github.com/kristofferostlund/adventofcode-2022/pkg/ints"
@@ -68,10 +67,7 @@ func (p Puzzle) Part1(reader io.Reader, cy int, debug bool) (int, error) {
 	for _, xRange := range xRanges {
 		overlapIdx := -1
 		for i, prev := range toUse {
-			if prev[0] <= xRange[0] && xRange[0] <= prev[1] ||
-				prev[0] <= xRange[1] && xRange[1] <= prev[1] ||
-				xRange[0] <= prev[0] && prev[0] <= xRange[1] ||
-				xRange[0] <= prev[1] && prev[1] <= xRange[1] {
+			if overlaps(prev, xRange) {
 				overlapIdx = i
 				break
 			}
@@ -97,8 +93,54 @@ func (p Puzzle) Part1(reader io.Reader, cy int, debug bool) (int, error) {
 	return counter, nil
 }
 
-func (p Puzzle) Part2(reader io.Reader) (int, error) {
-	return 0, nil
+func (p Puzzle) Part2(reader io.Reader, bounds grids.Bounds) (int, error) {
+	sensors, err := parseInput(reader)
+	if err != nil {
+		return 0, fmt.Errorf("parsing input: %w", err)
+	}
+
+	for i, s := range sensors {
+		// Since there's exactly one point on the map,
+		// it must be exactly 1 space oustide the range.
+		distance := sensors[i].ManhattanDistance() + 1
+
+		// Just learned about the [...]type shorthand for creating arrays
+		extremes := [...]grids.Loc{
+			s.At.Add(grids.Loc{0, distance}),  // top
+			s.At.Add(grids.Loc{distance, 0}),  // right
+			s.At.Add(grids.Loc{0, -distance}), // bottom
+			s.At.Add(grids.Loc{-distance, 0}), // left
+		}
+
+		for ei, extreme := range extremes {
+			next := extremes[(ei+1)%len(extremes)]
+
+			for loc := extreme; loc != next; loc = stepTowards(loc, next) {
+				if !bounds.IsInside(loc) {
+					continue
+				}
+
+				outsideAll := true
+				for j, other := range sensors {
+					if j == i {
+						continue
+					}
+
+					if other.InRangeOf(loc) {
+						outsideAll = false
+						break
+					}
+				}
+
+				if outsideAll {
+					x, y := loc.XY()
+					return x*4000000 + y, nil
+				}
+			}
+		}
+	}
+
+	return 0, errors.New("expected exactly one available space within the area, found none")
 }
 
 type Sensor struct {
@@ -110,8 +152,18 @@ func (s Sensor) ManhattanDistance() int {
 	return manhattanDistance(s.At, s.Beacon)
 }
 
+func (s Sensor) InRangeOf(loc grids.Loc) bool {
+	return manhattanDistance(s.At, loc) <= s.ManhattanDistance()
+}
+
 func manhattanDistance(a, b grids.Loc) int {
-	return ints.Abs(a[0]-b[0]) + ints.Abs(a[1]-b[1])
+	x, y := xyDiff(a, b)
+	return x + y
+}
+
+func xyDiff(a, b grids.Loc) (int, int) {
+	x, y := ints.Abs(a[0]-b[0]), ints.Abs(a[1]-b[1])
+	return x, y
 }
 
 func parseInput(reader io.Reader) ([]Sensor, error) {
@@ -123,19 +175,23 @@ func parseInput(reader io.Reader) ([]Sensor, error) {
 			continue
 		}
 
-		sensorStr, beaconStr, ok := strings.Cut(line, ":")
-		if !ok {
-			return nil, fmt.Errorf("malformed line: %q", line)
-		}
-
-		sensorAt, err := parsePoint(sensorStr)
+		var sensorAt, beaconAt [2]int
+		// I learned about fmt.Sscanf which is extremely convenient for AoC since
+		// a lot of the input is basically known strings like below with the only
+		// _variable_ data is what's to parse out!
+		scannedCount, err := fmt.Sscanf(
+			line,
+			"Sensor at x=%d, y=%d: closest beacon is at x=%d, y=%d",
+			&sensorAt[0],
+			&sensorAt[1],
+			&beaconAt[0],
+			&beaconAt[1],
+		)
 		if err != nil {
-			return nil, fmt.Errorf("parsing sensor point: %w", err)
+			return nil, fmt.Errorf("scanning line %q: %w", line, err)
 		}
-
-		beaconAt, err := parsePoint(beaconStr)
-		if err != nil {
-			return nil, fmt.Errorf("parsing sensor point: %w", err)
+		if got, want := scannedCount, 4; got != want {
+			return nil, fmt.Errorf("malformed line %q, got %d scanned values, want %d", line, got, want)
 		}
 
 		sensors = append(sensors, Sensor{At: sensorAt, Beacon: beaconAt})
@@ -143,39 +199,13 @@ func parseInput(reader io.Reader) ([]Sensor, error) {
 	return sensors, nil
 }
 
-func parsePoint(str string) (grids.Loc, error) {
-	// str is either something like "Sensor at x=2, y=18" or "closest beacon is at x=-2, y=15"
-	_, ptStr, ok := strings.Cut(str, " at ")
-	if !ok {
-		return grids.Loc{}, fmt.Errorf("malformed point string: %q", str)
-	}
+func overlaps(a [2]int, b [2]int) bool {
+	aLower, aUpper := a[0], a[1]
+	bLower, bUpper := b[0], b[1]
 
-	// "x=2, y=18" => "x=2" and "y=18"
-	xStr, yStr, ok := strings.Cut(ptStr, ", ")
-	if !ok {
-		return grids.Loc{}, fmt.Errorf("malformed xy string: %q", ptStr)
-	}
-
-	var x, y int
-	if _, val, ok := strings.Cut(xStr, "="); ok {
-		v, err := strconv.Atoi(val)
-		if err != nil {
-			return grids.Loc{}, fmt.Errorf("parsing x: %w", err)
-		}
-		x = v
-	} else {
-		return grids.Loc{}, fmt.Errorf("malformed x: %q", xStr)
-	}
-
-	if _, val, ok := strings.Cut(yStr, "="); ok {
-		v, err := strconv.Atoi(val)
-		if err != nil {
-			return grids.Loc{}, fmt.Errorf("parsing y: %w", err)
-		}
-		y = v
-	} else {
-		return grids.Loc{}, fmt.Errorf("malformed y: %q", xStr)
-	}
-
-	return grids.Loc{x, y}, nil
+	x := aLower <= bLower && bLower <= aUpper ||
+		aLower <= bUpper && bUpper <= aUpper ||
+		bLower <= aLower && aLower <= bUpper ||
+		bLower <= aUpper && aUpper <= bUpper
+	return x
 }

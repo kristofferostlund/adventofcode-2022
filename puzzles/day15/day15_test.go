@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kristofferostlund/adventofcode-2022/pkg/grids"
 	"github.com/kristofferostlund/adventofcode-2022/pkg/relative"
 	"github.com/kristofferostlund/adventofcode-2022/puzzles/day15"
 )
@@ -58,34 +59,34 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
 		})
 	})
 
-	// t.Run("Part2", func(t *testing.T) {
-	// 	t.Run("example input", func(t *testing.T) {
-	// 		want := 140
-	// 		got, err := day15.Puzzle{}.Part2(strings.NewReader(exampleInput))
-	// 		if err != nil {
-	// 			t.Fatalf("solving part 2: %v", err)
-	// 		}
-	// 		if got != want {
-	// 			t.Errorf("got %d, want %d", got, want)
-	// 		}
-	// 	})
+	t.Run("Part2", func(t *testing.T) {
+		t.Run("example input", func(t *testing.T) {
+			want := 56000011
+			got, err := day15.Puzzle{}.Part2(strings.NewReader(exampleInput), grids.NewBounds(0, 20, 0, 20))
+			if err != nil {
+				t.Fatalf("solving part 2: %v", err)
+			}
+			if got != want {
+				t.Errorf("got %d, want %d", got, want)
+			}
+		})
 
-	// 	// t.Run("input.txt", func(t *testing.T) {
-	// 	// 	f, err := os.Open(relative.Filepath("./input.txt"))
-	// 	// 	if err != nil {
-	// 	// 		t.Fatalf("opening file: %v", err)
-	// 	// 	}
-	// 	// 	defer f.Close()
+		t.Run("input.txt", func(t *testing.T) {
+			f, err := os.Open(relative.Filepath("./input.txt"))
+			if err != nil {
+				t.Fatalf("opening file: %v", err)
+			}
+			defer f.Close()
 
-	// 	// 	want := 22134
-	// 	// 	got, err := day15.Puzzle{}.Part2(f)
-	// 	// 	if err != nil {
-	// 	// 		t.Fatalf("solving part 1: %v", err)
-	// 	// 	}
+			want := 13743542639657
+			got, err := day15.Puzzle{}.Part2(f, grids.NewBounds(0, 4000000, 0, 4000000))
+			if err != nil {
+				t.Fatalf("solving part 1: %v", err)
+			}
 
-	// 	// 	if got != want {
-	// 	// 		t.Errorf("got %d, want %d", got, want)
-	// 	// 	}
-	// 	// })
-	// })
+			if got != want {
+				t.Errorf("got %d, want %d", got, want)
+			}
+		})
+	})
 }
