@@ -19,7 +19,6 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("parsing input: %w", err)
 	}
 
-	valveLookup := maps.LookupOf(valves, func(v Valve) string { return v.ID })
 	cache := make(map[string]int)
 
 	pq := queues.NewPriorityQueue[State]()
@@ -28,6 +27,9 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		Pressure:   0,
 		Position:   "AA", // Start at AA
 		OpenValves: sets.NewSet[string](),
+		// This is copie around and shared across all states.
+		// I'm not entirely sure I like it, but it makes the code a bit simpler.
+		valveLookup: maps.LookupOf(valves, func(v Valve) string { return v.ID }),
 	}, 0)
 
 	maxTime := 30
@@ -44,7 +46,7 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 			continue
 		}
 
-		nextStates := getNextStates(*state, valveLookup)
+		nextStates := getNextStates(*state)
 		for i := range nextStates {
 			next := nextStates[i]
 			key := cacheKey(&next)
@@ -56,7 +58,7 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 				continue
 			}
 
-			// ascending order
+			// Check the
 			pq.PushT(&next, -next.Pressure)
 		}
 	}
@@ -73,6 +75,8 @@ type State struct {
 	Pressure   int
 	Position   string
 	OpenValves sets.Set[string]
+
+	valveLookup map[string]Valve
 }
 
 func (s State) Copy() State {
@@ -81,12 +85,18 @@ func (s State) Copy() State {
 		Pressure:   s.Pressure,
 		Position:   s.Position,
 		OpenValves: s.OpenValves.Copy(),
+
+		valveLookup: s.valveLookup,
 	}
 }
 
-func (s *State) AddPressure(valveLookup map[string]Valve) {
+func (s *State) Valve() Valve {
+	return s.valveLookup[s.Position]
+}
+
+func (s *State) IncreasePressure() {
 	for _, id := range s.OpenValves.Values() {
-		s.Pressure += valveLookup[id].FlowRate
+		s.Pressure += s.valveLookup[id].FlowRate
 	}
 }
 
@@ -107,8 +117,8 @@ func (v Valve) String() string {
 	return v.ID
 }
 
-func getNextStates(state State, valveLookup map[string]Valve) []State {
-	v := valveLookup[state.Position]
+func getNextStates(state State) []State {
+	v := state.Valve()
 
 	nextStates := make([]State, 0, len(v.LeadsTo)+1)
 	if !state.OpenValves.Has(v.ID) && v.FlowRate > 0 {
@@ -117,7 +127,7 @@ func getNextStates(state State, valveLookup map[string]Valve) []State {
 		// Open the valve
 		next.OpenValves.Add(v.ID)
 		next.Time++
-		next.AddPressure(valveLookup)
+		next.IncreasePressure()
 		nextStates = append(nextStates, next)
 	}
 
@@ -127,7 +137,7 @@ func getNextStates(state State, valveLookup map[string]Valve) []State {
 		// Move to another valve
 		next.Position = id
 		next.Time++
-		next.AddPressure(valveLookup)
+		next.IncreasePressure()
 		nextStates = append(nextStates, next)
 	}
 
