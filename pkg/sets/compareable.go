@@ -9,12 +9,12 @@ type Set[T comparable] struct {
 	s map[T]struct{}
 }
 
-func newSet[T comparable]() Set[T] {
+func NewSet[T comparable]() Set[T] {
 	return Set[T]{make(map[T]struct{}, 0)}
 }
 
 func Of[T comparable](values []T) Set[T] {
-	set := newSet[T]()
+	set := NewSet[T]()
 	for _, v := range values {
 		set.s[v] = struct{}{}
 	}
@@ -48,7 +48,7 @@ func (s Set[T]) Intersection(other Set[T]) Set[T] {
 		a, b = b, a
 	}
 
-	intersection := newSet[T]()
+	intersection := NewSet[T]()
 	for v := range a.s {
 		if _, ok := b.s[v]; ok {
 			intersection.s[v] = struct{}{}
@@ -81,6 +81,10 @@ func (s Set[T]) Values() []T {
 	}
 
 	return out
+}
+
+func (s Set[T]) Copy() Set[T] {
+	return Of(s.Values())
 }
 
 func (s Set[T]) String() string {
