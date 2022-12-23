@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/kristofferostlund/adventofcode-2022/pkg/ints"
 	"github.com/kristofferostlund/adventofcode-2022/pkg/maps"
 	"github.com/kristofferostlund/adventofcode-2022/pkg/queues"
 )
@@ -19,8 +20,106 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("parsing input: %w", err)
 	}
 
-	cache := make(map[string]int)
+	maxTime := 30
+	keyFunc := func(s *State) string {
+		// We can simplify the cache key for the first part by tracking
+		// where we are and how many we've visited beforehand.
+		// Because we're looking for the most efficient path, this seems
+		// to be good enough to actually give us the best path while not
+		// accidentally filtering out bad performers early on.
+		// For the example input we go from 87898 to 3670 branches
+		// to test. In terms of time, this means we end up spending
+		// ~0.3s or so for the real input vs ~20s. Quite the improvement!
+		return fmt.Sprintf("%s-%d-%d", s.Position, s.OpenCount(), s.Time)
+	}
+	endStates := simulateEndStates(valves, maxTime, keyFunc)
 
+	maxPressure := 0
+	for _, state := range endStates {
+		maxPressure = ints.Max(maxPressure, state.Pressure)
+	}
+
+	return maxPressure, nil
+}
+
+func (p Puzzle) Part2(reader io.Reader) (int, error) {
+	valves, err := parseInput(reader)
+	if err != nil {
+		return 0, fmt.Errorf("parsing input: %w", err)
+	}
+
+	maxTime := 26 // 30 - the 4 minutes it takes to train an elephant.
+	keyFunc := func(s *State) string {
+		// The key used in Part1 seems to skip certain _locally_ sub-optimal parts
+		// which yields a worse result than if we extensively test all paths
+		// like we do here. The runtime here is of course worse than that of
+		// part 1, but not too bad compared to what I was expecting since the
+		// searchspace is smaller (less time allowed).
+		return fmt.Sprintf("%s-%b-%d", s.Position, s.BitMask, s.Time)
+	}
+	endStates := simulateEndStates(valves, maxTime, keyFunc)
+
+	var maxOpenCount float64 = 0
+	for _, v := range valves {
+		if v.FlowRate > 0 {
+			maxOpenCount++
+		}
+	}
+	duoPaths := make(map[uint64]int)
+	for _, state := range endStates {
+		percentOpened := float64(state.OpenCount()) / maxOpenCount
+		// We're aiming for a *rough* 50/50 split, 40/60 is a rough 50/5O!
+		if 0.4 <= percentOpened || percentOpened <= 0.6 {
+			if pressure, ok := duoPaths[state.BitMask]; !ok || pressure < state.Pressure {
+				duoPaths[state.BitMask] = state.Pressure
+			}
+		}
+	}
+
+	max := 0
+	for a, aMax := range duoPaths {
+		for b, bMax := range duoPaths {
+			// We're looking for pairs where there's no overlap at all.
+			if a&b == 0 {
+				max = ints.Max(max, aMax+bMax)
+			}
+		}
+	}
+
+	return max, nil
+}
+
+func simulateEndStates(valves []Valve, maxTime int, keyFunc func(next *State) string) map[string]State {
+	endStates := make(map[string]State)
+
+	pq := initPriorityQueue(valves)
+	for pq.Len() > 0 {
+		state := pq.PopT()
+
+		if state.Time == maxTime-1 {
+			// This branch is exhausted, no need to try further!
+			// No need to try further here.
+			continue
+		}
+
+		nextStates := getNextStates(*state)
+		for i := range nextStates {
+			next := nextStates[i]
+
+			key := keyFunc(&next)
+			if state, ok := endStates[key]; !ok || state.Pressure < next.Pressure {
+				endStates[key] = next
+			} else {
+				continue
+			}
+
+			pq.PushT(&next, -next.Pressure)
+		}
+	}
+	return endStates
+}
+
+func initPriorityQueue(valves []Valve) *queues.PriorityQueue[State] {
 	pq := queues.NewPriorityQueue[State]()
 	pq.PushT(&State{
 		Time:     0,
@@ -30,43 +129,7 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		// I'm not entirely sure I like it, but it makes the code a bit simpler.
 		valveLookup: maps.LookupOf(valves, func(v Valve) string { return v.ID }),
 	}, 0)
-
-	maxTime := 30
-
-	maxPressure := 0
-	for pq.Len() > 0 {
-		state := pq.PopT()
-
-		if state.Time == maxTime-1 {
-			// This branch is exhausted, no need to try further!
-			if state.Pressure > maxPressure {
-				maxPressure = state.Pressure
-			}
-			continue
-		}
-
-		nextStates := getNextStates(*state)
-		for i := range nextStates {
-			next := nextStates[i]
-			key := keyOf(&next)
-
-			if pressure, ok := cache[key]; !ok || pressure < next.Pressure {
-				cache[key] = next.Pressure
-			} else {
-				// No need to try further here.
-				continue
-			}
-
-			// Check the
-			pq.PushT(&next, -next.Pressure)
-		}
-	}
-
-	return maxPressure, nil
-}
-
-func (p Puzzle) Part2(reader io.Reader) (int, error) {
-	return 0, nil
+	return pq
 }
 
 type State struct {
@@ -107,6 +170,11 @@ func (s *State) IncreasePressure() {
 	}
 }
 
+func (s *State) OpenCount() int {
+	// Counting the 1s in BitMask was a bit faster than calling len(state.OpenedValves()).
+	return strings.Count(fmt.Sprintf("%b", s.BitMask), "1")
+}
+
 func (s *State) OpenedValves() []Valve {
 	valves := make([]Valve, 0)
 	for _, v := range s.valveLookup {
@@ -115,21 +183,6 @@ func (s *State) OpenedValves() []Valve {
 		}
 	}
 	return valves
-}
-
-func keyOf(state *State) string {
-	// We can simplify the cache key for the first part by tracking
-	// where we are and how many we've visited beforehand.
-	// Because we're looking for the most efficient path, this seems
-	// to be good enough to actually give us the best path while not
-	// accidentally filtering out bad performers early on.
-	// For the example input we go from 87898 to 3670 branches
-	// to test. In terms of time, this means we end up spending
-	// ~0.3s or so for the real input vs ~20s. Quite the improvement!
-
-	// Counting the 1s in BitMask was a bit faster than calling len(state.OpenedValves()).
-	openValveCount := strings.Count(fmt.Sprintf("%b", state.BitMask), "1")
-	return fmt.Sprintf("%s-%d-%d", state.Position, openValveCount, state.Time)
 }
 
 type Valve struct {

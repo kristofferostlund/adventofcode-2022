@@ -55,10 +55,8 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 	})
 
 	t.Run("Part2", func(t *testing.T) {
-		t.SkipNow()
-
 		t.Run("example input", func(t *testing.T) {
-			want := 140
+			want := 1707
 			got, err := day16.Puzzle{}.Part2(strings.NewReader(exampleInput))
 			if err != nil {
 				t.Fatalf("solving part 2: %v", err)
@@ -75,7 +73,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 			}
 			defer f.Close()
 
-			want := 22134
+			want := 2775
 			got, err := day16.Puzzle{}.Part2(f)
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)
