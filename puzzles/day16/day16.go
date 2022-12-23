@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/kristofferostlund/adventofcode-2022/pkg/maps"
 	"github.com/kristofferostlund/adventofcode-2022/pkg/queues"
-	"github.com/kristofferostlund/adventofcode-2022/pkg/sets"
 )
 
 type Puzzle struct{}
@@ -23,10 +23,9 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 
 	pq := queues.NewPriorityQueue[State]()
 	pq.PushT(&State{
-		Time:       0,
-		Pressure:   0,
-		Position:   "AA", // Start at AA
-		OpenValves: sets.NewSet[string](),
+		Time:     0,
+		Pressure: 0,
+		Position: "AA", // Start at AA
 		// This is copie around and shared across all states.
 		// I'm not entirely sure I like it, but it makes the code a bit simpler.
 		valveLookup: maps.LookupOf(valves, func(v Valve) string { return v.ID }),
@@ -49,7 +48,7 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		nextStates := getNextStates(*state)
 		for i := range nextStates {
 			next := nextStates[i]
-			key := cacheKey(&next)
+			key := keyOf(&next)
 
 			if pressure, ok := cache[key]; !ok || pressure < next.Pressure {
 				cache[key] = next.Pressure
@@ -71,20 +70,28 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 }
 
 type State struct {
-	Time       int
-	Pressure   int
-	Position   string
-	OpenValves sets.Set[string]
+	Time     int
+	Pressure int
+	Position string
+	BitMask  uint64
 
 	valveLookup map[string]Valve
 }
 
+func (s *State) OpenValve(v Valve) {
+	s.BitMask |= v.B
+}
+
+func (s *State) IsOpen(v Valve) bool {
+	return s.BitMask&v.B != 0
+}
+
 func (s State) Copy() State {
 	return State{
-		Time:       s.Time,
-		Pressure:   s.Pressure,
-		Position:   s.Position,
-		OpenValves: s.OpenValves.Copy(),
+		Time:     s.Time,
+		Pressure: s.Pressure,
+		Position: s.Position,
+		BitMask:  s.BitMask,
 
 		valveLookup: s.valveLookup,
 	}
@@ -95,22 +102,42 @@ func (s *State) Valve() Valve {
 }
 
 func (s *State) IncreasePressure() {
-	for _, id := range s.OpenValves.Values() {
-		s.Pressure += s.valveLookup[id].FlowRate
+	for _, v := range s.OpenedValves() {
+		s.Pressure += v.FlowRate
 	}
 }
 
-func cacheKey(state *State) string {
-	// I first did a thing where I stringified the open valves in order,
-	// We're talking like 0.15s vs almost 22s
-	// but this yields the same output but an extreme improvement in performance.
-	return fmt.Sprintf("%s-%d-%d", state.Position, state.OpenValves.Len(), state.Time)
+func (s *State) OpenedValves() []Valve {
+	valves := make([]Valve, 0)
+	for _, v := range s.valveLookup {
+		if s.IsOpen(v) {
+			valves = append(valves, v)
+		}
+	}
+	return valves
+}
+
+func keyOf(state *State) string {
+	// We can simplify the cache key for the first part by tracking
+	// where we are and how many we've visited beforehand.
+	// Because we're looking for the most efficient path, this seems
+	// to be good enough to actually give us the best path while not
+	// accidentally filtering out bad performers early on.
+	// For the example input we go from 87898 to 3670 branches
+	// to test. In terms of time, this means we end up spending
+	// ~0.3s or so for the real input vs ~20s. Quite the improvement!
+
+	// Counting the 1s in BitMask was a bit faster than calling len(state.OpenedValves()).
+	openValveCount := strings.Count(fmt.Sprintf("%b", state.BitMask), "1")
+	return fmt.Sprintf("%s-%d-%d", state.Position, openValveCount, state.Time)
 }
 
 type Valve struct {
 	ID       string
 	FlowRate int
 	LeadsTo  []string
+
+	B uint64
 }
 
 func (v Valve) String() string {
@@ -121,11 +148,11 @@ func getNextStates(state State) []State {
 	v := state.Valve()
 
 	nextStates := make([]State, 0, len(v.LeadsTo)+1)
-	if !state.OpenValves.Has(v.ID) && v.FlowRate > 0 {
+	if !state.IsOpen(v) && v.FlowRate > 0 {
 		next := state.Copy()
 
 		// Open the valve
-		next.OpenValves.Add(v.ID)
+		next.OpenValve(v)
 		next.Time++
 		next.IncreasePressure()
 		nextStates = append(nextStates, next)
@@ -160,6 +187,17 @@ func parseInput(reader io.Reader) ([]Valve, error) {
 		}
 
 		valves = append(valves, v)
+	}
+
+	sort.Slice(valves, func(i, j int) bool {
+		return valves[i].ID < valves[j].ID
+	})
+
+	var b uint64 = 2
+	for i := 0; i < len(valves); i++ {
+		b = b << 1
+		valves[i].B = b
+
 	}
 
 	return valves, nil
