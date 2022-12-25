@@ -12,49 +12,36 @@ import (
 const (
 	left  = "<"
 	right = ">"
-	down  = "v"
 )
 
-var rocks = [][]grids.Loc{
-	// ####
-	{{0, 0}, {1, 0}, {2, 0}, {3, 0}},
-	// .#.
-	// ###
-	// .#.
+var rocks = []Rock{
 	{
-		{1, 0},
-		{0, 1},
-		{1, 1},
-		{2, 1},
-		{1, 2},
+		// ####
+		{0, 0}, {1, 0}, {2, 0}, {3, 0},
 	},
-	// ..#
-	// ..#
-	// ###
 	{
-		{2, 0},
-		{2, 1},
-		{0, 2},
-		{1, 2},
-		{2, 2},
+		// .#.
+		// ###
+		// .#.
+		{1, 0}, {0, 1}, {1, 1}, {2, 1}, {1, 2},
 	},
-	// #
-	// #
-	// #
-	// #
 	{
-		{0, 0},
-		{0, 1},
-		{0, 2},
-		{0, 3},
+		// ..#
+		// ..#
+		// ###
+		{2, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2},
 	},
-	// ##
-	// ##
 	{
-		{0, 0},
-		{1, 0},
-		{0, 1},
-		{1, 1},
+		// #
+		// #
+		// #
+		// #
+		{0, 0}, {0, 1}, {0, 2}, {0, 3},
+	},
+	{
+		// ##
+		// ##
+		{0, 0}, {1, 0}, {0, 1}, {1, 1},
 	},
 }
 
@@ -74,33 +61,7 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("parsing input: %w", err)
 	}
 
-	grid := grids.NewGrid(".")
-	for i := 0; i < 7; i++ {
-		grid.Set(grids.Loc{i, 0}, "-")
-	}
-
-	ri, curr, counter := nextRock(grid, -1, 0)
-
-	for i, dir, useDir := nextDirection(directions, 0); counter <= 2022; i, dir, useDir = nextDirection(directions, i) {
-		if useDir {
-			next := move(dir, curr)
-			b := grids.BoundsOf(next)
-			gb := grid.Bounds()
-
-			if gb.MinX() <= b.MinX() && b.MaxX() <= gb.MaxX() && !hasCollision(grid, next) {
-				curr = next
-			}
-		} else {
-			next := move(down, curr)
-			if hasCollision(grid, next) {
-				addRockToGrid(grid, curr, "#")
-
-				ri, curr, counter = nextRock(grid, ri, counter)
-			} else {
-				curr = next
-			}
-		}
-	}
+	grid := simulateRocks(directions, 2022)
 
 	return grid.Bounds().Height(), nil
 }
@@ -109,30 +70,80 @@ func (p Puzzle) Part2(reader io.Reader) (int, error) {
 	return 0, nil
 }
 
-func addRockToGrid(grid *grids.Grid[string], rock []grids.Loc, c string) {
+func simulateRocks(directions []string, simulateCount int) *grids.Grid[string] {
+	grid := grids.NewGrid(".")
+	for i := 0; i < 7; i++ {
+		grid.Set(grids.Loc{i, 0}, "-")
+	}
+
+	rock, rockCount := nextRock(grid, 0)
+	for i := 0; rockCount <= simulateCount; i++ {
+		vec := nextDirection(directions, i)
+		next := rock.Add(vec)
+
+		if isHorizontal := vec[0] != 0; isHorizontal {
+			if next.WithinSides(grid) && !next.Collides(grid) {
+				rock = next
+			}
+		} else {
+			if !next.Collides(grid) {
+				rock = next
+			} else {
+				addToGrid(grid, rock)
+
+				rock, rockCount = nextRock(grid, rockCount)
+			}
+		}
+	}
+	return grid
+}
+
+func addToGrid(grid *grids.Grid[string], rock Rock) {
 	for _, l := range rock {
-		grid.Set(l, c)
+		grid.Set(l, "#")
 	}
 }
 
-func move(direction string, rock []grids.Loc) []grids.Loc {
-	var dir grids.Loc
-	switch direction {
-	case down:
-		dir = grids.Loc{0, 1} // down
+func nextRock(grid *grids.Grid[string], counter int) (Rock, int) {
+	i := counter % len(rocks)
+	next := Rock(slices.Copy(rocks[i]))
+
+	gridMinY := grid.Bounds().MinY()
+	b := rockBounds[i]
+
+	offset := grids.Loc{2, gridMinY - 4 - (b.MinY() + b.Height())}
+
+	return next.Add(offset), counter + 1
+}
+
+func nextDirection(directions []string, i int) grids.Loc {
+	isHorizontal := i%2 == 0
+	if !isHorizontal {
+		return grids.Loc{0, 1}
+	}
+
+	switch dir := directions[(i/2)%len(directions)]; dir {
 	case right:
-		dir = grids.Loc{1, 0} // right
+		return grids.Loc{1, 0}
 	case left:
-		dir = grids.Loc{-1, 0} // left
+		return grids.Loc{-1, 0}
 	default:
-		panic(fmt.Sprintf("illegal direction %q", direction))
+		panic(fmt.Sprintf("illegal direction %q", dir))
 	}
-
-	return addTo(rock, dir)
 }
 
-func hasCollision(g *grids.Grid[string], rock []grids.Loc) bool {
-	for _, l := range rock {
+type Rock []grids.Loc
+
+func (r Rock) Add(offset grids.Loc) Rock {
+	moved := slices.Copy(r)
+	for i, l := range moved {
+		moved[i] = l.Add(offset)
+	}
+	return moved
+}
+
+func (r Rock) Collides(g *grids.Grid[string]) bool {
+	for _, l := range r {
 		if _, collides := g.At(l); collides {
 			return true
 		}
@@ -140,35 +151,11 @@ func hasCollision(g *grids.Grid[string], rock []grids.Loc) bool {
 	return false
 }
 
-func nextRock(grid *grids.Grid[string], i, counter int) (int, []grids.Loc, int) {
-	i = (i + 1) % len(rocks)
-	next := slices.Copy(rocks[i])
+func (r Rock) WithinSides(g *grids.Grid[string]) bool {
+	b := grids.BoundsOf(r)
+	gb := g.Bounds()
 
-	gridMinY := grid.Bounds().MinY()
-	b := rockBounds[i]
-
-	offset := grids.Loc{2, gridMinY - 4 - (b.MinY() + b.Height())}
-
-	return i, addTo(next, offset), counter + 1
-}
-
-func nextDirection(directions []string, i int) (int, string, bool) {
-	next := i + 1
-	ok := i%2 == 0
-	if !ok {
-		return next, "", ok
-	}
-
-	di := (i / 2) % len(directions)
-	return next, directions[di], ok
-}
-
-func addTo(rock []grids.Loc, offset grids.Loc) []grids.Loc {
-	moved := slices.Copy(rock)
-	for i, l := range moved {
-		moved[i] = l.Add(offset)
-	}
-	return moved
+	return gb.MinX() <= b.MinX() && b.MaxX() <= gb.MaxX()
 }
 
 func parseInput(reader io.Reader) ([]string, error) {
