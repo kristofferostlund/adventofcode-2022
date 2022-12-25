@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"github.com/kristofferostlund/adventofcode-2022/pkg/maps"
 )
+
+var emptyBounds = NewBounds(math.MaxInt, math.MinInt, math.MaxInt, math.MinInt)
 
 type Grid[T comparable] struct {
 	bounds Bounds
@@ -14,8 +18,6 @@ type Grid[T comparable] struct {
 }
 
 func NewGrid[T comparable](emptyVal T) *Grid[T] {
-	emptyBounds := NewBounds(math.MaxInt, math.MinInt, math.MaxInt, math.MinInt)
-
 	grid := &Grid[T]{
 		bounds:   emptyBounds,
 		values:   make(map[Loc]T),
@@ -23,6 +25,14 @@ func NewGrid[T comparable](emptyVal T) *Grid[T] {
 	}
 
 	return grid
+}
+
+func (g *Grid[T]) Copy() *Grid[T] {
+	return &Grid[T]{
+		bounds:   g.bounds,
+		values:   maps.Copy(g.values),
+		emptyVal: g.emptyVal,
+	}
 }
 
 func (g *Grid[T]) At(at Loc) (T, bool) {
@@ -75,6 +85,10 @@ func (g *Grid[T]) Count(value T) int {
 	return counter
 }
 
+func (g Grid[T]) ElemCount() int {
+	return len(g.values)
+}
+
 func (g *Grid[T]) Set(loc Loc, value T) {
 	g.bounds = g.bounds.Extend(loc)
 	g.values[loc] = value
@@ -83,6 +97,8 @@ func (g *Grid[T]) Set(loc Loc, value T) {
 func (g *Grid[T]) Bounds() Bounds {
 	return g.bounds
 }
+
+
 
 func (g *Grid[T]) InBounds(loc Loc) bool {
 	return g.bounds.IsInside(loc)

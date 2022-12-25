@@ -1,5 +1,7 @@
 package grids
 
+import "github.com/kristofferostlund/adventofcode-2022/pkg/ints"
+
 type Bounds struct {
 	minX, maxX int
 	minY, maxY int
@@ -12,6 +14,14 @@ func NewBounds(minX, maxX, minY, maxY int) Bounds {
 		minY: minY,
 		maxY: maxY,
 	}
+}
+
+func BoundsOf(locs []Loc) Bounds {
+	b := emptyBounds
+	for _, l := range locs {
+		b = b.Extend(l)
+	}
+	return b
 }
 
 func (b Bounds) MaxX() int {
@@ -28,6 +38,14 @@ func (b Bounds) MaxY() int {
 
 func (b Bounds) MinY() int {
 	return b.minY
+}
+
+func (b Bounds) Height() int {
+	return ints.Abs(b.maxY - b.minY)
+}
+
+func (b Bounds) Width() int {
+	return ints.Abs(b.maxX - b.minY)
 }
 
 func (b Bounds) Extend(loc Loc) Bounds {
