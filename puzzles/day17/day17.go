@@ -61,41 +61,44 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 		return 0, fmt.Errorf("parsing input: %w", err)
 	}
 
-	grid := simulateRocks(directions, 2022)
-
-	return grid.Bounds().Height(), nil
+	return simulateRocks(directions, 2022), nil
 }
 
 func (p Puzzle) Part2(reader io.Reader) (int, error) {
 	return 0, nil
 }
 
-func simulateRocks(directions []string, simulateCount int) *grids.Grid[string] {
+func simulateRocks(directions []string, simulateCount int) int {
 	grid := grids.NewGrid(".")
 	for i := 0; i < 7; i++ {
 		grid.Set(grids.Loc{i, 0}, "-")
 	}
 
-	rock, rockCount := nextRock(grid, 0)
-	for i := 0; rockCount <= simulateCount; i++ {
+	rox := make([]Rock, 0)
+
+	rock := nextRock(grid, len(rox))
+	rox = append(rox, rock)
+
+	for i := 0; len(rox) <= simulateCount; i++ {
 		vec := nextDirection(directions, i)
 		next := rock.Add(vec)
 
-		if isHorizontal := vec[0] != 0; isHorizontal {
-			if next.WithinSides(grid) && !next.Collides(grid) {
-				rock = next
-			}
-		} else {
-			if !next.Collides(grid) {
-				rock = next
-			} else {
-				addToGrid(grid, rock)
+		isHorizontal := vec[0] != 0
+		switch {
+		case isHorizontal && next.WithinSides(grid) && !next.Collides(grid):
+			rock = next
+		case isHorizontal:
+			// Do nothing if either !next.WithinSides(grid) or next.Collides(grid
+		case !isHorizontal && next.Collides(grid):
+			addToGrid(grid, rock)
 
-				rock, rockCount = nextRock(grid, rockCount)
-			}
+			rock = nextRock(grid, len(rox))
+			rox = append(rox, rock)
+		case !isHorizontal:
+			rock = next
 		}
 	}
-	return grid
+	return grid.Bounds().Height()
 }
 
 func addToGrid(grid *grids.Grid[string], rock Rock) {
@@ -104,8 +107,8 @@ func addToGrid(grid *grids.Grid[string], rock Rock) {
 	}
 }
 
-func nextRock(grid *grids.Grid[string], counter int) (Rock, int) {
-	i := counter % len(rocks)
+func nextRock(grid *grids.Grid[string], rockCount int) Rock {
+	i := rockCount % len(rocks)
 	next := Rock(slices.Copy(rocks[i]))
 
 	gridMinY := grid.Bounds().MinY()
@@ -113,7 +116,7 @@ func nextRock(grid *grids.Grid[string], counter int) (Rock, int) {
 
 	offset := grids.Loc{2, gridMinY - 4 - (b.MinY() + b.Height())}
 
-	return next.Add(offset), counter + 1
+	return next.Add(offset)
 }
 
 func nextDirection(directions []string, i int) grids.Loc {
