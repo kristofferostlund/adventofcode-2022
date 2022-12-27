@@ -45,9 +45,7 @@ func TestPuzzle(t *testing.T) {
 
 	t.Run("Part2", func(t *testing.T) {
 		t.Run("example input", func(t *testing.T) {
-			t.SkipNow()
-
-			want := -1
+			want := 1514285714288
 			got, err := day17.Puzzle{}.Part2(strings.NewReader(exampleInput))
 			if err != nil {
 				t.Fatalf("solving part 2: %v", err)
@@ -58,15 +56,13 @@ func TestPuzzle(t *testing.T) {
 		})
 
 		t.Run("input.txt", func(t *testing.T) {
-			t.SkipNow()
-
 			f, err := os.Open(relative.Filepath("./input.txt"))
 			if err != nil {
 				t.Fatalf("opening file: %v", err)
 			}
 			defer f.Close()
 
-			want := -1
+			want := 1589142857183
 			got, err := day17.Puzzle{}.Part2(f)
 			if err != nil {
 				t.Fatalf("solving part 1: %v", err)

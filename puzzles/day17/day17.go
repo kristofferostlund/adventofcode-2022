@@ -65,7 +65,12 @@ func (p Puzzle) Part1(reader io.Reader) (int, error) {
 }
 
 func (p Puzzle) Part2(reader io.Reader) (int, error) {
-	return 0, nil
+	directions, err := parseInput(reader)
+	if err != nil {
+		return 0, fmt.Errorf("parsing input: %w", err)
+	}
+
+	return simulateRocks(directions, 1000000000000), nil
 }
 
 func simulateRocks(directions []string, simulateCount int) int {
@@ -74,13 +79,45 @@ func simulateRocks(directions []string, simulateCount int) int {
 		grid.Set(grids.Loc{i, 0}, "-")
 	}
 
-	rox := make([]Rock, 0)
+	type checkpoint struct {
+		rockCount int
+		height    int
+	}
 
-	rock := nextRock(grid, len(rox))
-	rox = append(rox, rock)
+	isFirstRepeatPattern := func() func(grid *grids.Grid[string], ri, di, rockCount int) ([2]checkpoint, bool) {
+		seen := make(map[string]checkpoint)
+		repeatAlreadyFound := false
 
-	for i := 0; len(rox) <= simulateCount; i++ {
-		vec := nextDirection(directions, i)
+		return func(grid *grids.Grid[string], ri, di, rockCount int) ([2]checkpoint, bool) {
+			if repeatAlreadyFound {
+				return [2]checkpoint{}, false
+			}
+
+			pt := checkpoint{
+				rockCount: rockCount,
+				height:    grid.Bounds().Height(),
+			}
+
+			sg := subsetGridOf(grid)
+			key := fmt.Sprintf("%d-%d-%s", ri, di, sg)
+
+			prev, isSeen := seen[key]
+			if !isSeen {
+				seen[key] = pt
+				return [2]checkpoint{}, false
+			}
+
+			repeatAlreadyFound = true
+			return [2]checkpoint{prev, pt}, true
+		}
+	}()
+
+	rockCount := 0
+	rock, ri := nextRock(grid, rockCount)
+	simulatedHeight := 0
+
+	for i := 0; rockCount < simulateCount; i++ {
+		vec, di := nextDirection(directions, i)
 		next := rock.Add(vec)
 
 		isHorizontal := vec[0] != 0
@@ -91,14 +128,33 @@ func simulateRocks(directions []string, simulateCount int) int {
 			// Do nothing if either !next.WithinSides(grid) or next.Collides(grid
 		case !isHorizontal && next.Collides(grid):
 			addToGrid(grid, rock)
+			rockCount++
 
-			rock = nextRock(grid, len(rox))
-			rox = append(rox, rock)
+			// The first time we see a repeating pattern we can calculate
+			// the height difference from the first occurrence and the repeat
+			// to then calculate how many extra iterations would be needed
+			// to eventually get to the final count. Since it's highly unlikely
+			// all remaining iterations would be "exhausted" like this, we
+			// increase the rockCount and store the simulated height.
+			if checkpoints, ok := isFirstRepeatPattern(grid, ri, di, rockCount); ok {
+				a, b := checkpoints[0], checkpoints[1]
+				rDelta := b.rockCount - a.rockCount
+				hDelta := b.height - a.height
+
+				remainder := simulateCount - rockCount
+
+				mul := remainder / rDelta
+				rockCount += mul * rDelta
+				simulatedHeight = mul * hDelta
+			}
+
+			rock, ri = nextRock(grid, rockCount)
 		case !isHorizontal:
 			rock = next
 		}
 	}
-	return grid.Bounds().Height()
+
+	return grid.Bounds().Height() + simulatedHeight
 }
 
 func addToGrid(grid *grids.Grid[string], rock Rock) {
@@ -107,32 +163,77 @@ func addToGrid(grid *grids.Grid[string], rock Rock) {
 	}
 }
 
-func nextRock(grid *grids.Grid[string], rockCount int) Rock {
+func nextRock(grid *grids.Grid[string], rockCount int) (Rock, int) {
 	i := rockCount % len(rocks)
-	next := Rock(slices.Copy(rocks[i]))
-
 	gridMinY := grid.Bounds().MinY()
 	b := rockBounds[i]
 
 	offset := grids.Loc{2, gridMinY - 4 - (b.MinY() + b.Height())}
 
-	return next.Add(offset)
+	return rocks[i].Add(offset), i
 }
 
-func nextDirection(directions []string, i int) grids.Loc {
+func nextDirection(directions []string, i int) (grids.Loc, int) {
+	di := (i / 2) % len(directions)
+
 	isHorizontal := i%2 == 0
 	if !isHorizontal {
-		return grids.Loc{0, 1}
+		return grids.Loc{0, 1}, di
 	}
 
-	switch dir := directions[(i/2)%len(directions)]; dir {
+	switch dir := directions[di]; dir {
 	case right:
-		return grids.Loc{1, 0}
+		return grids.Loc{1, 0}, di
 	case left:
-		return grids.Loc{-1, 0}
+		return grids.Loc{-1, 0}, di
 	default:
 		panic(fmt.Sprintf("illegal direction %q", dir))
 	}
+}
+
+func subsetGridOf(grid *grids.Grid[string]) *grids.Grid[string] {
+	var got, want uint64 = 0, 0
+
+	bounds := grid.Bounds()
+	xb := make([]uint64, bounds.Width()+1)
+	var b uint64 = 1
+	for i := 0; i < len(xb); i++ {
+		b <<= 1
+		xb[i] = b
+		want |= b
+	}
+
+	subGrid := grids.NewGrid(".")
+
+	for y := bounds.MinY(); y <= bounds.MaxY(); y++ {
+		for x := bounds.MinX(); x <= bounds.MaxX(); x++ {
+			at := grids.Loc{x, y}
+			value, ok := grid.At(at)
+			if ok {
+				got |= xb[x]
+				subGrid.Set(at, value)
+
+				if got == want {
+					return subGrid
+				}
+			}
+		}
+	}
+
+	// for i := len(fallenRocks) - 1; i >= 0; i-- {
+	// 	rock := fallenRocks[i]
+	// 	for _, l := range rock {
+	// 		subGrid.Set(l, "#")
+	// 		x, _ := l.XY()
+	// 		got |= xb[x]
+	// 	}
+
+	// 	if got == want {
+	// 		return subGrid
+	// 	}
+	// }
+
+	return subGrid
 }
 
 type Rock []grids.Loc
@@ -159,6 +260,10 @@ func (r Rock) WithinSides(g *grids.Grid[string]) bool {
 	gb := g.Bounds()
 
 	return gb.MinX() <= b.MinX() && b.MaxX() <= gb.MaxX()
+}
+
+func (r Rock) Copy() Rock {
+	return slices.Copy(r)
 }
 
 func parseInput(reader io.Reader) ([]string, error) {

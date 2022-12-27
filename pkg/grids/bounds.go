@@ -45,7 +45,7 @@ func (b Bounds) Height() int {
 }
 
 func (b Bounds) Width() int {
-	return ints.Abs(b.maxX - b.minY)
+	return ints.Abs(b.maxX - b.minX)
 }
 
 func (b Bounds) Extend(loc Loc) Bounds {
